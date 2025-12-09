@@ -47,7 +47,7 @@ export function useForge() {
     // Verificar que los contratos estén desplegados
     const isAXSValid = contracts.axsToken !== '0x0000000000000000000000000000000000000000';
     const isSLPValid = contracts.slpToken !== '0x0000000000000000000000000000000000000000';
-    const isMementoValid = contracts.mementoToken !== '0x0000000000000000000000000000000000000000';
+    const isMementoValid = !!contracts.mementos && contracts.mementos.beast !== '0x0000000000000000000000000000000000000000';
 
     if (!isAXSValid || !isSLPValid || !isMementoValid) {
       console.warn('⚠️ Algunos contratos no están desplegados. Deploy los contratos en testnet primero.');
@@ -63,7 +63,7 @@ export function useForge() {
         contracts.scorchHeartTransmuter,
         contracts.axsToken,
         contracts.slpToken,
-        contracts.mementoToken,
+        contracts.mementos.beast,
         provider as any
       );
 
@@ -126,7 +126,7 @@ export function useForge() {
         contracts.scorchHeartTransmuter,
         contracts.axsToken,
         contracts.slpToken,
-        contracts.mementoToken,
+        contracts.mementos.beast,
         signer
       );
 
@@ -181,32 +181,71 @@ export function useForge() {
 
   // Eclosionar geoda
   const hatchGeode = async (geodeId: bigint) => {
+    console.log('🔧 [FORGE_HOOK] hatchGeode iniciado');
+    console.log('🔧 [FORGE_HOOK] GeodeId:', geodeId.toString());
+    console.log('🔧 [FORGE_HOOK] Estado inicial:', {
+      address,
+      hasContracts: !!contracts,
+      hasChain: !!chain,
+      hasWalletClient: !!walletClient
+    });
+
     if (!address || !contracts || !chain || !walletClient) {
+      console.error('❌ [FORGE_HOOK] Wallet not connected');
       throw new Error('Wallet not connected');
     }
 
+    console.log('🔧 [FORGE_HOOK] Configurando loading state...');
     setIsLoading(true);
     setError(null);
 
     try {
+      console.log('🔧 [FORGE_HOOK] Creando provider y signer...');
       const provider = new ethers.BrowserProvider(walletClient as any);
       const signer = await provider.getSigner();
+      console.log('🔧 [FORGE_HOOK] Signer creado:', await signer.getAddress());
+
+      console.log('🔧 [FORGE_HOOK] Creando forgeService...');
+      console.log('🔧 [FORGE_HOOK] Contratos:', {
+        transmuter: contracts.scorchHeartTransmuter,
+        axsToken: contracts.axsToken,
+        slpToken: contracts.slpToken,
+        mementos: contracts.mementos
+      });
 
       const forgeService = createForgeService(
         contracts.scorchHeartTransmuter,
         contracts.axsToken,
         contracts.slpToken,
-        contracts.mementoToken,
+        contracts.mementos.beast, // Usar cualquier memento para hatchGeode (no se usa)
         signer
       );
 
+      // Verificar que el usuario realmente posee ese tokenId, para evitar errores de "no existe"
+      try {
+        const owned = await forgeService.listUserGeodeTokenIds(await signer.getAddress());
+        console.log('🔧 [FORGE_HOOK] Geodas del usuario (NFT):', owned.map(id => id.toString()));
+        const ownsToken = owned.some(id => id === geodeId);
+        console.log('🔧 [FORGE_HOOK] ¿Usuario posee geodeId?', ownsToken);
+        if (!ownsToken) {
+          throw new Error(`Tu wallet no posee la geoda ${geodeId.toString()}.`);
+        }
+      } catch (e) {
+        console.log('🔧 [FORGE_HOOK] No se pudo confirmar propiedad vía NFT. Continuando con el intento de eclosión...', e);
+      }
+
+      console.log('🔧 [FORGE_HOOK] Ejecutando hatchGeode en forgeService...');
       const result = await forgeService.hatchGeode(geodeId);
+      console.log('✅ [FORGE_HOOK] Resultado exitoso:', result);
       return result;
     } catch (err) {
+      console.error('❌ [FORGE_HOOK] Error en hatchGeode:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to hatch geode';
+      console.error('❌ [FORGE_HOOK] Error message:', errorMessage);
       setError(errorMessage);
       throw err;
     } finally {
+      console.log('🔧 [FORGE_HOOK] Finalizando, setIsLoading(false)');
       setIsLoading(false);
     }
   };

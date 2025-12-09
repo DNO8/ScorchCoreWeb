@@ -25,92 +25,109 @@ export enum AxieClass {
   DAWN = 8,
 }
 
+// Constantes del sistema de forja según manual
+export const FORGING_CONSTANTS = {
+  CRITICAL_CHANCE: 1, // 1% probabilidad crítica en eclosión
+  MEMENTOS_PER_PERCENT: 10, // Cada 10 mementos reducen 1% la probabilidad de fallo
+} as const;
+
 // Información de categorías
+// Requisitos de Axies según manual:
+// - Petit: 1 Axie (2 cruzas min, Purity min 3/6)
+// - Alto: 2 Axies (1 con parte evolucionada)
+// - Animal: 2 Axies (ambos con parte evolucionada)
+// - Ultramech: 2 Axies (ambos con parte evolucionada)
+// - Tanque: 3 Axies (2 del tipo principal + 1 Planta, ambos principales con parte evolucionada)
 export const CATEGORY_INFO = {
   [GeodeCategory.PETIT]: {
     id: GeodeCategory.PETIT,
     name: 'Petit',
     displayName: 'Petit (Común)',
     rarity: 'Común',
-    maxSupply: 10000,
+    maxSupply: 90000, // 90,000 total (10,000 por cada clase)
     miningPower: 75,
     collectionBonus: 2.0, // 2%
     repairCost: 3, // 3% de producción mensual
     color: '#94a3b8', // slate-400
+    icon: '/images/typesGeodes/petit.png',
     defaultCost: {
-      axs: '100', // 100 AXS según whitepaper
-      slp: '50000', // 50,000 SLP
-      memento: '100', // 100 mementos
+      axs: '0.1', // 0.1 AXS = 1 Axie NFT (testnet)
+      slp: '350', // 350 SLP según Manual de Forja
+      memento: '5', // 5 mementos (para testear mecánica)
     },
-    failureRate: 10, // 10%
+    failureRate: 10, // 10% (90% éxito)
   },
   [GeodeCategory.ALTO]: {
     id: GeodeCategory.ALTO,
     name: 'Alto',
     displayName: 'Alto (Poco Común)',
     rarity: 'Poco Común',
-    maxSupply: 7500,
+    maxSupply: 67500, // 67,500 total (7,500 por cada clase)
     miningPower: 125,
     collectionBonus: 2.0, // 2%
     repairCost: 3, // 3% de producción mensual
     color: '#22c55e', // green-500
+    icon: '/images/typesGeodes/Alto.png',
     defaultCost: {
-      axs: '250',
-      slp: '100000',
-      memento: '250',
+      axs: '0.2', // 0.2 AXS = 2 Axies NFT (testnet)
+      slp: '500', // 500 SLP según Manual de Forja
+      memento: '10', // 10 mementos
     },
-    failureRate: 20, // 20%
+    failureRate: 20, // 20% (80% éxito)
   },
   [GeodeCategory.ANIMAL]: {
     id: GeodeCategory.ANIMAL,
     name: 'Animal',
     displayName: 'Animal (Raro)',
     rarity: 'Raro',
-    maxSupply: 5000,
+    maxSupply: 45000, // 45,000 total (5,000 por cada clase)
     miningPower: 165,
     collectionBonus: 2.0, // 2%
     repairCost: 3, // 3% de producción mensual
     color: '#3b82f6', // blue-500
+    icon: '/images/typesGeodes/Animal.png',
     defaultCost: {
-      axs: '500',
-      slp: '150000',
-      memento: '500',
+      axs: '0.2', // 0.2 AXS = 2 Axies NFT (testnet)
+      slp: '500', // 500 SLP según Manual de Forja
+      memento: '15', // 15 mementos
     },
-    failureRate: 30, // 30%
+    failureRate: 25, // 25% (75% éxito)
   },
   [GeodeCategory.ULTRAMECH]: {
     id: GeodeCategory.ULTRAMECH,
     name: 'Ultramech',
     displayName: 'Ultramech (Ultra Raro)',
     rarity: 'Ultra Raro',
-    maxSupply: 5000,
+    maxSupply: 45000, // 45,000 total (5,000 por cada clase)
     miningPower: 165,
     collectionBonus: 2.0, // 2%
     repairCost: 3, // 3% de producción mensual
     color: '#a855f7', // purple-500
+    icon: '/images/typesGeodes/ULTRA_Mecánico.png',
     defaultCost: {
-      axs: '1000',
-      slp: '250000',
-      memento: '1000',
+      axs: '0.2', // 0.2 AXS = 2 Axies NFT (testnet)
+      slp: '500', // 500 SLP según Manual de Forja
+      memento: '20', // 20 mementos
     },
-    failureRate: 40, // 40%
+    failureRate: 25, // 25% (75% éxito)
   },
   [GeodeCategory.TANQUE]: {
     id: GeodeCategory.TANQUE,
     name: 'Tanque',
     displayName: 'Tanque (Épico)',
     rarity: 'Épico',
-    maxSupply: 5000,
+    maxSupply: 45000, // 45,000 total (5,000 por cada clase)
     miningPower: 200,
     collectionBonus: 2.0, // 2%
     repairCost: 3, // 3% de producción mensual
     color: '#f59e0b', // amber-500
+    icon: '/images/typesGeodes/Tanque.png',
     defaultCost: {
-      axs: '2500',
-      slp: '500000',
-      memento: '2500',
+      axs: '0.3', // 0.3 AXS = 2 Axies + 1 Planta (testnet)
+      slp: '500', // 500 SLP según Manual de Forja
+      memento: '30', // 30 mementos
     },
-    failureRate: 50, // 50%
+    failureRate: 25, // 25% (75% éxito)
   },
 } as const;
 
@@ -194,22 +211,36 @@ export function getGeodeVideoPath(category: GeodeCategory, axieClass: AxieClass)
   const categoryNameUpper = CATEGORY_INFO[category].name.toUpperCase();
   
   // Mapeo de clases según los nombres de archivos reales
-  // ALTO usa nombres diferentes para DAWN y DUSK
-  const classNameMap: Record<AxieClass, string> = {
-    [AxieClass.BEAST]: 'BESTIA',
-    [AxieClass.AQUA]: 'AQUA',
-    [AxieClass.BIRD]: 'AVE',
-    [AxieClass.REPTILE]: 'REPTIL',
-    [AxieClass.BUG]: 'BICHO',
-    [AxieClass.PLANT]: 'PLANTA',
-    [AxieClass.MECH]: 'MECH',
-    [AxieClass.DUSK]: category === GeodeCategory.ALTO ? 'OSCURIDAD' : 'DUSK',
-    [AxieClass.DAWN]: category === GeodeCategory.ALTO ? 'AMANECER' : 'DAWN',
+  // Diferentes categorías usan diferentes nombres para las clases
+  const getClassName = (cat: GeodeCategory, axie: AxieClass): string => {
+    const baseNames = {
+      [AxieClass.BEAST]: 'BESTIA',
+      [AxieClass.AQUA]: 'AQUA',
+      [AxieClass.BIRD]: 'AVE',
+      [AxieClass.REPTILE]: 'REPTIL',
+      [AxieClass.BUG]: 'BICHO',
+      [AxieClass.PLANT]: 'PLANTA',
+      [AxieClass.MECH]: 'MECH',
+      [AxieClass.DUSK]: 'DUSK',
+      [AxieClass.DAWN]: 'DAWN',
+    };
+
+    // Casos especiales por categoría
+    if (cat === GeodeCategory.ALTO) {
+      if (axie === AxieClass.DUSK) return 'OSCURIDAD';
+      if (axie === AxieClass.DAWN) return 'AMANECER';
+    }
+    
+    if (cat === GeodeCategory.TANQUE) {
+      if (axie === AxieClass.AQUA) return 'AGUA'; // TANQUE usa AGUA en lugar de AQUA
+    }
+
+    return baseNames[axie];
   };
   
-  const className = classNameMap[axieClass];
+  const className = getClassName(category, axieClass);
   
-  // Formato: "GEODA PETIT BESTIA.mp4"
+  // Formato: "GEODA [CATEGORY] [CLASS].mp4"
   return `/images/geodes/${categoryName}/GEODA ${categoryNameUpper} ${className}.mp4`;
 }
 
@@ -220,10 +251,18 @@ export function getMementoIcon(axieClass: AxieClass): string {
 
 // Helper: verificar si una categoría está disponible (tiene assets)
 export function isCategoryAvailable(category: GeodeCategory): boolean {
-  // PETIT, ALTO y ANIMAL están disponibles con sus videos
+  // Todas las categorías están disponibles ahora que tenemos iconos y videos
+  return true;
+}
+
+// Helper: verificar si una categoría tiene videos disponibles
+export function hasGeodeVideos(category: GeodeCategory): boolean {
+  // Categorías con videos disponibles
   return category === GeodeCategory.PETIT || 
          category === GeodeCategory.ALTO || 
-         category === GeodeCategory.ANIMAL;
+         category === GeodeCategory.ANIMAL ||
+         category === GeodeCategory.TANQUE ||
+         category === GeodeCategory.ULTRAMECH;
 }
 
 // Listas para selectores

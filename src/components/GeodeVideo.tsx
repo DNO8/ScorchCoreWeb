@@ -5,7 +5,8 @@ import {
   getGeodeVideoPath,
   CATEGORY_INFO,
   AXIE_CLASS_INFO,
-  isCategoryAvailable
+  isCategoryAvailable,
+  hasGeodeVideos
 } from '@/lib/constants/geodes';
 
 interface GeodeVideoProps {
@@ -31,17 +32,19 @@ export function GeodeVideo({
   const classInfo = AXIE_CLASS_INFO[axieClass];
   const videoPath = getGeodeVideoPath(category, axieClass);
   const isAvailable = isCategoryAvailable(category);
+  const hasVideos = hasGeodeVideos(category);
 
   // Debug: mostrar qué video se está cargando
   console.log('🎬 GeodeVideo:', {
     category: categoryInfo.name,
     class: classInfo.displayName,
     videoPath,
-    isAvailable
+    isAvailable,
+    hasVideos
   });
 
-  // Si la categoría no está disponible, mostrar fallback
-  if (!isAvailable) {
+  // Si la categoría no está disponible o no tiene videos, mostrar fallback
+  if (!isAvailable || !hasVideos) {
     if (!showFallback) return null;
     
     return (

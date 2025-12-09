@@ -1,22 +1,25 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
-import { Card, Button, Badge, Loading } from '@/components/ui';
-import { GeodeVideo } from '@/components/GeodeVideo';
-import Link from 'next/link';
-import { useAccount, usePublicClient } from 'wagmi';
-import { useContracts } from '@/lib/hooks/useContracts';
-import { ethers } from 'ethers';
-import { GEODE_NFT_ABI, TRANSMUTER_ABI } from '@/lib/abis';
-import { 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useWallet } from "@/lib/hooks/useWallet";
+import { useForge } from "@/lib/hooks/useForge";
+import { Card, Button, Badge, Loading, Toast, useToast } from "@/components/ui";
+import { GeodeVideo } from "@/components/GeodeVideo";
+import { HatchRoulette } from "@/components/HatchRoulette";
+import { HatchSuccessModal } from "@/components/HatchSuccessModal";
+import Link from "next/link";
+import { useAccount, usePublicClient } from "wagmi";
+import { useContracts } from "@/lib/hooks/useContracts";
+import { ethers } from "ethers";
+import { GEODE_NFT_ABI, TRANSMUTER_ABI } from "@/lib/abis";
+import {
   GeodeCategory,
   AxieClass,
   CATEGORY_INFO,
   AXIE_CLASS_INFO,
-  getGeodeName
-} from '@/lib/constants/geodes';
+  getGeodeName,
+} from "@/lib/constants/geodes";
 
 interface GeodeInfo {
   id: bigint;
@@ -38,90 +41,122 @@ export default function InventoryPage() {
   const { address, chain } = useAccount();
   const contracts = useContracts();
   const publicClient = usePublicClient();
+  const { hatchGeode, isLoading: isHatching, error: hatchError } = useForge();
+  const { toast, showSuccess, showError, showInfo, hideToast } = useToast();
 
   const [geodes, setGeodes] = useState<GeodeInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showHatchAnimation, setShowHatchAnimation] = useState(false);
+  const [hatchingGeodeId, setHatchingGeodeId] = useState<bigint | null>(null);
+  const [hatchingGeode, setHatchingGeode] = useState<GeodeInfo | null>(null);
+  const [isTxConfirmed, setIsTxConfirmed] = useState(false);
+
+  // Estados para el modal de éxito
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [hatchedMiner, setHatchedMiner] = useState<{
+    id: bigint;
+    name: string;
+    rarity: string;
+    power: number;
+    videoPath: string;
+    category: GeodeCategory;
+    axieClass: AxieClass;
+  } | null>(null);
 
   // Debug: Ver valores de dependencias
-  console.log('📊 Estado del componente Inventory:');
-  console.log('  isConnected:', isConnected);
-  console.log('  address:', address);
-  console.log('  contracts:', contracts);
-  console.log('  chain:', chain);
+  console.log("📊 Estado del componente Inventory:");
+  console.log("  isConnected:", isConnected);
+  console.log("  address:", address);
+  console.log("  contracts:", contracts);
+  console.log("  chain:", chain);
 
   // Cargar geodas del usuario
   const loadGeodes = async () => {
-    console.log('🚀 loadGeodes() llamada');
-    console.log('  address:', address);
-    console.log('  contracts:', contracts);
-    console.log('  chain:', chain);
-    
+    console.log("🚀 loadGeodes() llamada");
+    console.log("  address:", address);
+    console.log("  contracts:", contracts);
+    console.log("  chain:", chain);
+
     if (!address || !contracts || !chain) {
-      console.log('❌ loadGeodes salió temprano - falta:', {
+      console.log("❌ loadGeodes salió temprano - falta:", {
         address: !address,
         contracts: !contracts,
-        chain: !chain
+        chain: !chain,
       });
       return;
     }
 
-    console.log('🔄 Iniciando carga de geodas...');
+    console.log("🔄 Iniciando carga de geodas...");
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log('📡 Creando provider con RPC:', chain.rpcUrls.default.http[0]);
-      const provider = new ethers.JsonRpcProvider(chain.rpcUrls.default.http[0]);
+      console.log(
+        "📡 Creando provider con RPC:",
+        chain.rpcUrls.default.http[0],
+      );
+      const provider = new ethers.JsonRpcProvider(
+        chain.rpcUrls.default.http[0],
+      );
 
-      console.log('📜 Creando contrato GeodeNFT en:', contracts.geodeNFT);
+      console.log("📜 Creando contrato GeodeNFT en:", contracts.geodeNFT);
       const geodeContract = new ethers.Contract(
         contracts.geodeNFT,
         GEODE_NFT_ABI,
-        provider
+        provider,
       );
 
-      console.log('📜 Creando contrato Transmuter en:', contracts.scorchHeartTransmuter);
+      console.log(
+        "📜 Creando contrato Transmuter en:",
+        contracts.scorchHeartTransmuter,
+      );
       const transmuterContract = new ethers.Contract(
         contracts.scorchHeartTransmuter,
         TRANSMUTER_ABI,
-        provider
+        provider,
       );
 
       // Obtener geodas forjadas por el usuario mediante eventos
       // Ronin testnet limita a máximo 500 bloques por query
-      console.log('🔢 Obteniendo block number...');
+      console.log("🔢 Obteniendo block number...");
       const currentBlock = await provider.getBlockNumber();
       console.log(`  Current block: ${currentBlock}`);
-      
+
       // Buscar en los últimos 10000 bloques dividiendo en chunks de 499 bloques
       const totalBlocksToSearch = 10000;
       const chunkSize = 499; // Ronin permite máximo 500 bloques, usamos 499 para estar seguros
       const startBlock = Math.max(0, currentBlock - totalBlocksToSearch);
-      
-      console.log(`  Buscando eventos desde bloque ${startBlock} hasta ${currentBlock} (${totalBlocksToSearch} bloques)`);
-      console.log('🔍 Realizando búsqueda en chunks de 500 bloques...');
-      
+
+      console.log(
+        `  Buscando eventos desde bloque ${startBlock} hasta ${currentBlock} (${totalBlocksToSearch} bloques)`,
+      );
+      console.log("🔍 Realizando búsqueda en chunks de 500 bloques...");
+
       let allForgedEvents: any[] = [];
-      
+
       // Dividir en chunks y buscar
       for (let from = startBlock; from <= currentBlock; from += chunkSize + 1) {
         const to = Math.min(from + chunkSize, currentBlock);
         console.log(`  📦 Chunk: bloques ${from} - ${to}`);
-        
+
         const events = await transmuterContract.queryFilter(
           transmuterContract.filters.GeodeForged(address),
           from,
-          to
+          to,
         );
-        
+
         if (events.length > 0) {
-          console.log(`    ✅ Encontrados ${events.length} eventos en este chunk`);
+          console.log(
+            `    ✅ Encontrados ${events.length} eventos en este chunk`,
+          );
           allForgedEvents = allForgedEvents.concat(events);
         }
       }
-      
-      console.log(`✅ Búsqueda completada! Total de eventos encontrados: ${allForgedEvents.length}`);
+
+      console.log(
+        `✅ Búsqueda completada! Total de eventos encontrados: ${allForgedEvents.length}`,
+      );
       const forgedEvents = allForgedEvents;
 
       if (forgedEvents.length === 0) {
@@ -136,14 +171,30 @@ export default function InventoryPage() {
       // Obtener info de cada geoda y filtrar las que el usuario aún posee
       const geodesDataPromises = geodeIds.map(async (id: bigint) => {
         try {
-          console.log(`🔍 Cargando geoda ${id}...`);
-          
+          console.log(`🔍 Cargando geoda ${id.toString()}...`);
+
           // Verificar si el usuario todavía es dueño de la geoda
-          console.log(`  Llamando ownerOf(${id})...`);
-          const owner = await geodeContract.ownerOf(id);
-          console.log(`  Owner: ${owner}, User: ${address}`);
-          
-          // Si no es el dueño (puede haber sido quemada), omitir
+          // Si la geoda fue quemada (eclosionada), ownerOf revertirá
+          let owner: string;
+          try {
+            owner = await geodeContract.ownerOf(id);
+          } catch (ownerError: any) {
+            // Si falla ownerOf, la geoda no existe (fue quemada)
+            if (
+              ownerError?.message?.includes("invalid token ID") ||
+              ownerError?.message?.includes("nonexistent token")
+            ) {
+              console.log(
+                `  ⚡ Geoda ${id.toString()} fue quemada (eclosionada), omitiendo`,
+              );
+              return null;
+            }
+            throw ownerError; // Re-lanzar otros errores
+          }
+
+          console.log(`  ✓ Owner: ${owner}`);
+
+          // Si no es el dueño, omitir
           if (owner.toLowerCase() !== address.toLowerCase()) {
             console.log(`  ❌ Usuario no es owner, omitiendo`);
             return null;
@@ -152,21 +203,23 @@ export default function InventoryPage() {
           console.log(`  Llamando getGeodeInfo(${id})...`);
           const info = await geodeContract.getGeodeInfo(id);
           console.log(`  Info recibida:`, info);
-          
+
           // info ahora devuelve [category, axieClass, forgeDate, creator]
           const category = Number(info[0]) as GeodeCategory;
           const axieClass = Number(info[1]) as AxieClass;
           const forgeDate = Number(info[2]);
           const creator = info[3];
-          
+
           const categoryInfo = CATEGORY_INFO[category];
           const classInfo = AXIE_CLASS_INFO[axieClass];
           const fullName = getGeodeName(category, axieClass);
-          
-          console.log(`  ✅ Geoda ${id} cargada - ${fullName}, Fecha: ${forgeDate}`);
-          
-          // Calcular si puede eclosionar (24 horas después de forja)
-          const hatchTime = forgeDate + (24 * 3600); // 24 horas en segundos
+
+          console.log(
+            `  ✅ Geoda ${id} cargada - ${fullName}, Fecha: ${forgeDate}`,
+          );
+
+          // Calcular si puede eclosionar (1 minuto después de forja - PARA PRUEBAS)
+          const hatchTime = forgeDate + 60; // 1 minuto en segundos
           const now = Math.floor(Date.now() / 1000);
           const canHatch = now >= hatchTime;
 
@@ -188,39 +241,47 @@ export default function InventoryPage() {
             canHatch: canHatch && !isHatched,
           };
         } catch (err) {
-          // Si falla (ej: geoda quemada), retornar null
-          console.error(`❌ Error cargando geoda ${id}:`, err);
-          console.log(`Geoda ${id} no disponible (probablemente quemada)`);
+          // Otros errores inesperados (no debería llegar aquí para geodas quemadas)
+          console.warn(
+            `⚠️ Error inesperado cargando geoda ${id.toString()}:`,
+            err,
+          );
           return null;
         }
       });
 
       const allGeodesData = await Promise.all(geodesDataPromises);
-      
+
       // Filtrar nulls (geodas quemadas o no accesibles)
-      const geodesData = allGeodesData.filter((geode) => geode !== null) as GeodeInfo[];
+      const geodesData = allGeodesData.filter(
+        (geode) => geode !== null,
+      ) as GeodeInfo[];
 
       setGeodes(geodesData);
     } catch (err) {
-      console.error('Error loading geodes:', err);
-      setError(err instanceof Error ? err.message : 'Error loading geodes');
+      console.error("Error loading geodes:", err);
+      setError(err instanceof Error ? err.message : "Error loading geodes");
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('🔄 useEffect ejecutado - Intentando cargar geodas...');
-    console.log('  Condiciones:', { isConnected, address: !!address, contracts: !!contracts });
-    
+    console.log("🔄 useEffect ejecutado - Intentando cargar geodas...");
+    console.log("  Condiciones:", {
+      isConnected,
+      address: !!address,
+      contracts: !!contracts,
+    });
+
     if (isConnected && address && contracts) {
-      console.log('✅ Todas las condiciones OK - Llamando loadGeodes()');
+      console.log("✅ Todas las condiciones OK - Llamando loadGeodes()");
       loadGeodes();
     } else {
-      console.log('❌ Falta alguna condición:', {
+      console.log("❌ Falta alguna condición:", {
         isConnected,
         hasAddress: !!address,
-        hasContracts: !!contracts
+        hasContracts: !!contracts,
       });
     }
   }, [isConnected, address, contracts]);
@@ -228,7 +289,7 @@ export default function InventoryPage() {
   // Redirect si no está conectado
   useEffect(() => {
     if (!isConnected) {
-      router.push('/');
+      router.push("/");
     }
   }, [isConnected, router]);
 
@@ -236,7 +297,7 @@ export default function InventoryPage() {
     const now = Math.floor(Date.now() / 1000);
     const remaining = hatchTime - now;
 
-    if (remaining <= 0) return 'Listo para eclosionar';
+    if (remaining <= 0) return "Listo para eclosionar";
 
     const hours = Math.floor(remaining / 3600);
     const minutes = Math.floor((remaining % 3600) / 60);
@@ -247,6 +308,205 @@ export default function InventoryPage() {
     }
 
     return `${hours}h ${minutes}m restantes`;
+  };
+
+  const handleHatchGeode = async (geodeId: bigint) => {
+    console.log("🚀 [HATCH] Iniciando proceso de eclosión");
+    console.log("🚀 [HATCH] GeodeId:", geodeId.toString());
+    console.log("🚀 [HATCH] Estado inicial:", {
+      isHatching,
+      showHatchAnimation,
+      hatchingGeodeId: hatchingGeodeId?.toString(),
+      geodesCount: geodes.length,
+    });
+
+    try {
+      // Encontrar la geoda que se va a eclosionar
+      const geodeToHatch = geodes.find((g) => g.id === geodeId);
+      console.log("🚀 [HATCH] Geoda encontrada:", geodeToHatch);
+
+      if (!geodeToHatch) {
+        console.error("❌ [HATCH] Geoda no encontrada en la lista");
+        return;
+      }
+
+      console.log("🚀 [HATCH] Configurando estados para animación");
+      setHatchingGeodeId(geodeId);
+      setHatchingGeode(geodeToHatch);
+      setShowHatchAnimation(true);
+      setIsTxConfirmed(false); // Reset estado de confirmación
+
+      console.log("🚀 [HATCH] Estados configurados, mostrando ruleta");
+      console.log("🚀 [HATCH] Geoda para eclosionar:", {
+        id: geodeToHatch.id.toString(),
+        category: geodeToHatch.category,
+        axieClass: geodeToHatch.axieClass,
+        fullName: geodeToHatch.fullName,
+        canHatch: geodeToHatch.canHatch,
+      });
+
+      // Ejecutar el contrato inmediatamente (la ruleta girará como placeholder)
+      console.log("🚀 [HATCH] Ejecutando contrato de eclosión");
+      setTimeout(async () => {
+        try {
+          showInfo("Enviando transacción de eclosión...");
+
+          const result = await hatchGeode(geodeId);
+          console.log("✅ [HATCH] Eclosión exitosa:", result);
+          console.log("✅ [HATCH] Transaction hash:", result.tx.hash);
+          console.log("✅ [HATCH] Miner ID:", result.minerId?.toString());
+
+          // Mostrar datos del miner si están disponibles
+          if (result.minerData) {
+            // Los valores ya son bigint, convertirlos a string para mostrar
+            const tokenId = result.minerData.tokenId.toString();
+            const power = result.minerData.power.toString();
+            const efficiency = result.minerData.efficiency.toString();
+            const isCritical = result.minerData.isCritical;
+
+            console.log("🎉 [HATCH] Miner Stats:", {
+              tokenId,
+              power,
+              efficiency,
+              isCritical: isCritical ? "⭐ CRÍTICO" : "Normal",
+              rawTypes: {
+                tokenId: typeof result.minerData.tokenId,
+                power: typeof result.minerData.power,
+                efficiency: typeof result.minerData.efficiency,
+              },
+            });
+
+            showSuccess(
+              `¡CoreMiner #${tokenId} eclosionado! ⚡${power} ⚙️${efficiency} ${isCritical ? "⭐" : ""}`,
+            );
+          } else {
+            // Fallback si minerData no está disponible
+            const minerId =
+              typeof result.minerId === "bigint"
+                ? result.minerId.toString()
+                : String(result.minerId || "N/A");
+            showSuccess(`¡Geoda eclosionada exitosamente! Miner #${minerId}`);
+          }
+
+          // Marcar transacción como confirmada para que la ruleta aplique RNG
+          console.log("✅ [HATCH] Marcando transacción como confirmada");
+          setIsTxConfirmed(true);
+
+          // Recargar geodas después de la eclosión
+          console.log("🔄 [HATCH] Recargando geodas...");
+          await loadGeodes();
+          console.log("✅ [HATCH] Geodas recargadas");
+        } catch (contractError: any) {
+          console.error("❌ [HATCH] Error en contrato:", contractError);
+          console.error("❌ [HATCH] Error details:", {
+            message: contractError?.message,
+            code: contractError?.code,
+            data: contractError?.data,
+          });
+
+          // Mostrar error específico
+          let errorMessage = "Error al eclosionar geoda";
+          if (
+            contractError?.message?.includes("user rejected") ||
+            contractError?.message?.includes("User rejected")
+          ) {
+            errorMessage = "Transacción cancelada por el usuario";
+          } else if (contractError?.message?.includes("insufficient funds")) {
+            errorMessage = "Fondos insuficientes para gas";
+          } else if (contractError?.message) {
+            errorMessage = contractError.message.substring(0, 100);
+          }
+
+          showError(errorMessage);
+
+          // En caso de error (rechazo), cerrar la ruleta
+          setShowHatchAnimation(false);
+          setHatchingGeodeId(null);
+          setHatchingGeode(null);
+          setIsTxConfirmed(false);
+        }
+      }, 500); // Pequeño delay para que la ruleta inicie primero
+    } catch (error: any) {
+      console.error("❌ [HATCH] Error general en eclosión:", error);
+      console.error("❌ [HATCH] Error stack:", error?.stack);
+      setShowHatchAnimation(false);
+      setHatchingGeodeId(null);
+      setHatchingGeode(null);
+    }
+  };
+
+  const handleRouletteComplete = (result: any) => {
+    console.log("🎉 [ROULETTE] Ruleta completada");
+    console.log("🎉 [ROULETTE] Resultado:", result);
+    console.log("🎉 [ROULETTE] Minero seleccionado:", {
+      id: result?.id,
+      name: result?.name,
+      rarity: result?.rarity,
+      power: result?.power,
+      probability: result?.probability,
+    });
+
+    if (!hatchingGeode) return;
+
+    // Construir path del video del miner
+    // Los thumbnails están en: /images/miners-thumbnails/CATEGORY/CATEGORY CLASS/NAME-thumbnail.webp
+    // Los videos están en: /images/miners-thumbnails/CATEGORY/CATEGORY CLASS/NAME.mp4
+    const categoryFolders: Record<GeodeCategory, string> = {
+      [GeodeCategory.PETIT]: "PETIT",
+      [GeodeCategory.ALTO]: "ALTO",
+      [GeodeCategory.ANIMAL]: "ANIMAL",
+      [GeodeCategory.ULTRAMECH]: "ULTRAMECH",
+      [GeodeCategory.TANQUE]: "TANK",
+    };
+
+    const classFolders: Record<AxieClass, string> = {
+      [AxieClass.AQUA]: "AQUA",
+      [AxieClass.BIRD]: "AVE",
+      [AxieClass.BUG]: "BICHO",
+      [AxieClass.PLANT]: "PLANTA",
+      [AxieClass.REPTILE]: "REPTIL",
+      [AxieClass.BEAST]: "BESTIA",
+      [AxieClass.MECH]: "MECH",
+      [AxieClass.DUSK]: "DUSK",
+      [AxieClass.DAWN]: "DAWN",
+    };
+
+    const categoryFolder = categoryFolders[hatchingGeode.category];
+    // Para ULTRAMECH, las subcarpetas usan "ULTRA" en lugar de "ULTRAMECH"
+    const subfolder =
+      hatchingGeode.category === GeodeCategory.ULTRAMECH
+        ? "ULTRA"
+        : categoryFolder;
+    const classFolder = `${subfolder} ${classFolders[hatchingGeode.axieClass]}`;
+
+    // El nombre viene limpio del thumbnail con guiones bajos
+    // Los videos tienen espacios, así que convertimos guiones bajos a espacios
+    // Ej: "CHORRO_PRECISO" -> "CHORRO PRECISO"
+    const minerFileName = result?.name?.replace(/_/g, " ");
+
+    // La ruta correcta es /images/miners/ no /images/miners-thumbnails/
+    const videoPath = `/images/miners/${categoryFolder}/${classFolder}/${minerFileName}.mp4`;
+
+    console.log("🎬 [ROULETTE] Video path construido:", videoPath);
+
+    // Guardar datos del miner para el modal
+    setHatchedMiner({
+      id: hatchingGeodeId!,
+      name: result?.name || "CoreMiner",
+      rarity: result?.rarity || "common",
+      power: result?.power || 0,
+      videoPath,
+      category: hatchingGeode.category,
+      axieClass: hatchingGeode.axieClass,
+    });
+
+    // Ocultar ruleta y mostrar modal de éxito
+    console.log("🎉 [ROULETTE] Ocultando animación y mostrando modal...");
+    setTimeout(() => {
+      setShowHatchAnimation(false);
+      setShowSuccessModal(true);
+      setIsTxConfirmed(false);
+    }, 1500); // Esperar 1.5 segundos para que se vea el resultado
   };
 
   if (!isConnected) {
@@ -271,11 +531,14 @@ export default function InventoryPage() {
                 Geodas Cristalinas y CoreMiners
               </p>
             </div>
-            <Link href="/forge">
-              <Button variant="primary">
-                🔨 Forjar Nueva Geoda
-              </Button>
-            </Link>
+            <div className="flex gap-3">
+              <Link href="/dashboard">
+                <Button variant="secondary">← Volver al Dashboard</Button>
+              </Link>
+              <Link href="/forge">
+                <Button variant="primary">🔨 Forjar Nueva Geoda</Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -329,13 +592,16 @@ export default function InventoryPage() {
               {geodes.map((geode) => (
                 <Card
                   key={geode.id.toString()}
-                  variant={geode.canHatch ? 'gradient' : 'glass'}
+                  variant={geode.canHatch ? "gradient" : "glass"}
                   hover
                   className="p-6"
                 >
                   {/* Video de la Geoda */}
-                  <div className="mb-4 flex items-center justify-center bg-black/20 rounded-lg overflow-hidden" style={{ height: '240px' }}>
-                    <GeodeVideo 
+                  <div
+                    className="mb-4 flex items-center justify-center bg-black/20 rounded-lg overflow-hidden"
+                    style={{ height: "240px" }}
+                  >
+                    <GeodeVideo
                       category={geode.category}
                       axieClass={geode.axieClass}
                       className="h-full w-auto max-w-full object-contain"
@@ -348,22 +614,24 @@ export default function InventoryPage() {
                       Geoda {geode.fullName}
                     </h3>
                     <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                      <Badge 
-                        variant="info" 
+                      <Badge
+                        variant="info"
                         className="text-xs"
-                        style={{ 
-                          backgroundColor: CATEGORY_INFO[geode.category].color + '40',
-                          borderColor: CATEGORY_INFO[geode.category].color
+                        style={{
+                          backgroundColor:
+                            CATEGORY_INFO[geode.category].color + "40",
+                          borderColor: CATEGORY_INFO[geode.category].color,
                         }}
                       >
                         {geode.categoryName}
                       </Badge>
-                      <Badge 
-                        variant="default" 
+                      <Badge
+                        variant="default"
                         className="text-xs"
-                        style={{ 
-                          backgroundColor: AXIE_CLASS_INFO[geode.axieClass].color + '40',
-                          borderColor: AXIE_CLASS_INFO[geode.axieClass].color
+                        style={{
+                          backgroundColor:
+                            AXIE_CLASS_INFO[geode.axieClass].color + "40",
+                          borderColor: AXIE_CLASS_INFO[geode.axieClass].color,
                         }}
                       >
                         {geode.className}
@@ -407,8 +675,14 @@ export default function InventoryPage() {
                     <Button
                       variant="primary"
                       className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+                      onClick={() => handleHatchGeode(geode.id)}
+                      disabled={isHatching && hatchingGeodeId === geode.id}
                     >
-                      🐣 Eclosionar Ahora
+                      {isHatching && hatchingGeodeId === geode.id ? (
+                        <>🎲 Eclosionando...</>
+                      ) : (
+                        <>🐣 Eclosionar Ahora</>
+                      )}
                     </Button>
                   )}
 
@@ -429,6 +703,43 @@ export default function InventoryPage() {
           </>
         )}
       </div>
+
+      {/* Componente de Ruleta de Eclosión */}
+      {showHatchAnimation && hatchingGeode && (
+        <HatchRoulette
+          category={hatchingGeode.category}
+          axieClass={hatchingGeode.axieClass}
+          isVisible={showHatchAnimation}
+          onComplete={handleRouletteComplete}
+          loopUntilConfirm={true}
+          isConfirmed={isTxConfirmed}
+        />
+      )}
+
+      {/* Modal de Éxito de Eclosión */}
+      {showSuccessModal && hatchedMiner && (
+        <HatchSuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => {
+            setShowSuccessModal(false);
+            setHatchedMiner(null);
+            setHatchingGeodeId(null);
+            setHatchingGeode(null);
+          }}
+          category={hatchedMiner.category}
+          axieClass={hatchedMiner.axieClass}
+          minerId={hatchedMiner.id}
+          minerName={hatchedMiner.name}
+          minerRarity={hatchedMiner.rarity}
+          minerPower={hatchedMiner.power}
+          minerVideoPath={hatchedMiner.videoPath}
+        />
+      )}
+
+      {/* Toast de Notificaciones */}
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
+      )}
     </div>
   );
 }

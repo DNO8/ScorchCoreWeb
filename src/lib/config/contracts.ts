@@ -8,6 +8,7 @@ import type { Address } from '@/types';
 export interface ContractAddresses {
   // Tokens
   coreToken: Address;
+  fCoreToken: Address; // Token de recompensas de mining
   slpToken: Address;
   axsToken: Address;
   
@@ -47,6 +48,7 @@ const MAINNET_CONTRACTS: ContractAddresses = {
   axsToken: '0x97a9107c1793bc407d6f527b77e7fff4d812bece',
   slpToken: '0xa8754b9fa15fc18bb59458815510e40a12cd2014',
   coreToken: '0x0000000000000000000000000000000000000000',
+  fCoreToken: '0x0000000000000000000000000000000000000000',
   
   // Mementos (actualizar después del deploy)
   mementos: {
@@ -74,36 +76,38 @@ const MAINNET_CONTRACTS: ContractAddresses = {
 };
 
 // Ronin Testnet Addresses (2021)
-// Deployed on Nov 10, 2025 - Full System v2 with 9 Mementos
+// Deployed on Nov 10, 2025 - UPDATED Nov 16, 2025
 const TESTNET_CONTRACTS: ContractAddresses = {
-  // Mock Tokens
-  axsToken: '0x59E8ab9C8f7264456c05F3819aF441b4E3ed4244', // MockAXS
-  slpToken: '0x815B45A3D7d4A9fdb29FE2cFc78FdBa296cC8831', // MockSLP
-  coreToken: '0x4d3199f7a96aEB1B71b1557055053ccA595201cD', // MockCORE
+  // Mock Tokens (from deployment-testnet.json)
+  // Tokens (REDESPLIEGUE COMPLETO Nov 17, 2025)
+  axsToken: '0x2f06F03bcbE94c7970b97D8Ddd5793a7beDE26b3', // MockAXS ✅ NUEVO
+  slpToken: '0x1cd1459a4A4400F35313d7C0f41e3d80FF21Fc67', // MockSLP ✅ NUEVO // MockSLP
+  coreToken: '0x236E0F5652e8f8863C1CB1E599bB309020a76539', // MockCORE
+  fCoreToken: '0x66871e6949493f02b81047693430ac2Fda3bcC98', // fCORE (recompensas de mining) ✅
   
-  // Mementos (9 tokens, uno por clase)
+  // Memento Tokens (REDESPLIEGUE Nov 17, 2025 - 9 mementos específicos por clase)
   mementos: {
-    beast: '0xBfD408Ca9c42C80A48B176a50A9E79Bc909888A9',   // Beast Memento (MBEAST)
-    aqua: '0xFaEeC4617296aa8A89E33a3aBd42A25118776b96',    // Aqua Memento (MAQUA)
-    bird: '0xa31D16d195F0FdA8cd8b8F6D24a73505eD41bb74',    // Bird Memento (MBIRD)
-    reptile: '0x563195BB1eed684E90a3C4DCf5802073d48f0d05', // Reptile Memento (MREPT)
-    bug: '0x484E95EcbC39b4EE53FC53C26F79f2f77365A7Db',     // Bug Memento (MBUG)
-    plant: '0xeF125955E4Bd3CEc6717267c64eAFaFF5b8A5D80',   // Plant Memento (MPLANT)
-    mech: '0x28ce2FEE758497D085F6c1e3668bb5b12348D364',    // Mech Memento (MMECH)
-    dusk: '0xCAE97b4bf534D78De099879BC4fDD9f34E041Ed3',    // Dusk Memento (MDUSK)
-    dawn: '0x0C01bA22B572DEF1C71506a52302048b677fA25f',    // Dawn Memento (MDAWN)
+    beast: '0x98d5466D0654495D718e14A80e219e4F43cA8f70',   // Beast Memento ✅ NUEVO
+    aqua: '0xc3A3dfD5d300Fd2A1ab3CfcEc0155F98C32d8fe9',    // Aqua Memento ✅ NUEVO
+    bird: '0x87f69AD483163c5669974b8e41aAf8Cc2afD549e',    // Bird Memento ✅ NUEVO
+    reptile: '0xd032c6046F2d69434Dd5b635ae8EaE9b0320eB49', // Reptile Memento ✅ NUEVO
+    bug: '0x123Aa341e74A0dA523c1B667aC07E51e39F2eC83',     // Bug Memento ✅ NUEVO
+    plant: '0xEDf19942589Dd7fb2637Ef5Ca21183ba0eeF6461',   // Plant Memento ✅ NUEVO
+    mech: '0x29802D4d2B58fE33c02289345Ab6502743F3454d',    // Mech Memento ✅ NUEVO
+    dusk: '0xD74b3E89Cd4145606CB6C0536DdF871667b2d165',    // Dusk Memento ✅ NUEVO
+    dawn: '0x4C7B285c325A9Bf136bb5a733e377B0903066910',    // Dawn Memento ✅ NUEVO
   },
   
-  // Mock NFTs
-  axieNFT: '0xF2463FCB0211D5D4C224FBD67299d26B241Aae18', // MockAxieNFT (old deployment)
-  geodeNFT: '0xFeb3df836f07565320e35538c832691037601cAF', // GeodeNFT (NEW)
-  coreMinerNFT: '0x6ADC507df7d225c79294f387c8E3d1eEAD1d83ce', // CoreMinerNFT (NEW)
+  // NFTs (REDESPLIEGUE COMPLETO Nov 17, 2025)
+  axieNFT: '0xF2463FCB0211D5D4C224FBD67299d26B241Aae18', // MockAxieNFT
+  geodeNFT: '0x22A5587085f6717E2462Ef2eFF0DD0AcFa354FEc', // GeodeNFT ✅ NUEVO
+  coreMinerNFT: '0xC119c50166D7DC9866a1548E5B6c70A354c0c8D6', // CoreMinerNFTV2 ✅ ACTUALIZADO Nov 17
   
-  // Core Contracts
-  scorchHeartTransmuter: '0x64Ac90ECd159793152B65ac426B53D47Be53e165', // ScorchHeartTransmuter (NEW)
-  axsTreasuryVault: '0x3d25d88D9b529d4e3493E3c7151e2D5b9ad74198', // AXSTreasuryVault (NEW)
-  miningScheduler: '0xEe4A2d70561D6508238cC2AE6933263cBEBf307A', // (old deployment)
-  axieStakingManager: '0xbB45Eca5C79FBed11384c0Ae5792F032cE4d9741', // (old deployment)
+  // Core Contracts (REDESPLIEGUE COMPLETO Nov 17, 2025)
+  scorchHeartTransmuter: '0x8a0F8989A4ce18066eA186df793E8ab0e65F8bc6', // TransmuterV2 ✅ ACTUALIZADO Nov 17
+  axsTreasuryVault: '0x910c0409ae9AafDb3B0f681D2f8A5C4Ce71505c3', // AXSTreasuryVault ✅ NUEVO
+  miningScheduler: '0x4E9fAd24C85b73164D74FAe1204A4ec10046BA35', // MiningScheduler ✅ FIXED Nov 17 - Apuntando al CoreMinerNFT correcto
+  axieStakingManager: '0xbB45Eca5C79FBed11384c0Ae5792F032cE4d9741', // AxieStakingManager
 };
 
 /**
@@ -134,15 +138,18 @@ export function isValidAddress(address: Address): boolean {
  */
 export function getValidContracts(chainId: number): Partial<ContractAddresses> {
   const addresses = getContractAddresses(chainId);
-  const validAddresses: Partial<ContractAddresses> = {};
+  const validAddresses: any = {};
   
   for (const [key, value] of Object.entries(addresses)) {
-    if (isValidAddress(value as Address)) {
-      validAddresses[key as keyof ContractAddresses] = value as Address;
+    // mementos es un objeto, manejarlo especialmente
+    if (key === 'mementos' && typeof value === 'object') {
+      validAddresses[key] = value;
+    } else if (typeof value === 'string' && isValidAddress(value as Address)) {
+      validAddresses[key] = value;
     }
   }
   
-  return validAddresses;
+  return validAddresses as Partial<ContractAddresses>;
 }
 
 /**

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { Card, Button, Badge, Loading } from '@/components/ui';
+import { getMinerVideoPath } from '@/lib/utils/minerNames';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -50,19 +51,17 @@ export default function DashboardPage() {
   }
 
   function getMinerTypeName(type: number): string {
+    // minerType del contrato (0-8) representa las clases de Axie
     const types: Record<number, string> = {
-      0: 'Bestia',
-      1: 'Ave',
-      2: 'Oscuridad',
-      3: 'Aqua',
-      4: 'Planta',
-      5: 'Mech',
-      6: 'Ultramech',
-      7: 'Reptil',
-      8: 'Dawn',
-      9: 'Dusk',
-      10: 'Bicho',
-      11: 'Tanque',
+      0: 'Bestia',    // Beast
+      1: 'Aqua',      // Aqua
+      2: 'Ave',       // Bird
+      3: 'Reptil',    // Reptile
+      4: 'Bicho',     // Bug
+      5: 'Planta',    // Plant
+      6: 'Mech',      // Mech
+      7: 'Dusk',      // Dusk
+      8: 'Dawn',      // Dawn
     };
     return types[type] || 'Unknown';
   }
@@ -80,14 +79,39 @@ export default function DashboardPage() {
   }));
 
   // Convertir datos de mineros
-  const displayMiners = miners.map((miner) => ({
-    id: miner.tokenId.toString(),
-    type: getMinerTypeName(Number(miner.minerType)),
-    power: Number(miner.power),
-    status: 'Idle', // TODO: Obtener del contrato de mining
-    efficiency: Number(miner.efficiency),
-    dailyOutput: '0', // TODO: Calcular desde el contrato
-  }));
+  const displayMiners = miners.map((miner) => {
+    // NOTA: El contrato actual solo retorna minerType (0-8) que representa la clase de Axie
+    // Por ahora todos los miners son PETIT (stage no viene del contrato)
+    // minerType se mapea a las clases de Axie que coinciden con las carpetas
+    
+    const classNames: Record<number, string> = {
+      0: 'BESTIA',   // Beast (aunque PETIT no tiene esta carpeta)
+      1: 'AQUA',     // Aqua
+      2: 'AVE',      // Bird
+      3: 'REPTIL',   // Reptile
+      4: 'BICHO',    // Bug
+      5: 'PLANTA',   // Plant
+      6: 'MECH',     // Mech
+      7: 'DUSK',     // Dusk
+      8: 'DAWN'      // Dawn (aunque PETIT no tiene esta carpeta)
+    };
+    
+    // Por ahora todos los miners son PETIT (el contrato no almacena categoría)
+    const categoryName = 'PETIT';
+    const className = classNames[Number(miner.minerType)] || 'AQUA';
+    const videoPath = getMinerVideoPath(categoryName, className, miner.name);
+    
+    return {
+      id: miner.tokenId.toString(),
+      name: miner.name || 'CoreMiner',
+      type: getMinerTypeName(Number(miner.minerType)),
+      power: miner.miningPower ? Number(miner.miningPower) : 0,
+      status: 'Idle', // TODO: Obtener del contrato de mining
+      efficiency: miner.efficiency ? Number(miner.efficiency) : 0,
+      dailyOutput: '0', // TODO: Calcular desde el contrato
+      videoPath: videoPath,
+    };
+  });
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -442,50 +466,67 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {displayMiners.map((miner) => (
-                <Card key={miner.id} variant="gradient" className="p-6">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="h-16 w-16 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-3xl">
+                <Card key={miner.id} variant="gradient" className="p-4">
+                  {/* Video del CoreMiner - Tamaño completo */}
+                  <div className="aspect-square rounded-lg overflow-hidden bg-black/20 mb-4">
+                    {miner.videoPath ? (
+                      <video
+                        src={miner.videoPath}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-6xl">
                         💎
                       </div>
-                      <div>
-                        <h3 className="text-2xl font-bold text-white mb-1">
-                          CoreMiner {miner.type}
-                        </h3>
-                        <Badge variant={miner.status === 'Mining' ? 'success' : 'default'}>
-                          {miner.status}
-                        </Badge>
-                      </div>
+                    )}
+                  </div>
+
+                  {/* Header compacto */}
+                  <div className="mb-3">
+                    <h3 className="text-lg font-bold text-white mb-0.5">
+                      {miner.name}
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400">CoreMiner {miner.type}</p>
+                      <Badge variant={miner.status === 'Mining' ? 'success' : 'default'} className="text-xs">
+                        {miner.status}
+                      </Badge>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-black/40 rounded-lg p-4 border border-gray-700">
-                      <div className="text-sm text-gray-400 mb-1">Poder de Minado</div>
-                      <div className="text-2xl font-bold text-orange-500">{miner.power}</div>
+                  {/* Stats compactos */}
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div className="bg-black/40 rounded p-2 border border-gray-700">
+                      <div className="text-xs text-gray-400 mb-0.5">Poder</div>
+                      <div className="text-sm font-bold text-orange-500">{miner.power}</div>
                     </div>
-                    <div className="bg-black/40 rounded-lg p-4 border border-gray-700">
-                      <div className="text-sm text-gray-400 mb-1">Eficiencia</div>
-                      <div className="text-2xl font-bold text-green-500">{miner.efficiency}%</div>
+                    <div className="bg-black/40 rounded p-2 border border-gray-700">
+                      <div className="text-xs text-gray-400 mb-0.5">Eficiencia</div>
+                      <div className="text-sm font-bold text-green-500">{miner.efficiency}%</div>
                     </div>
-                    <div className="bg-black/40 rounded-lg p-4 border border-gray-700 col-span-2">
-                      <div className="text-sm text-gray-400 mb-1">Producción Diaria</div>
-                      <div className="text-2xl font-bold text-white">{miner.dailyOutput} $CORE</div>
+                    <div className="bg-black/40 rounded p-2 border border-gray-700">
+                      <div className="text-xs text-gray-400 mb-0.5">Diaria</div>
+                      <div className="text-sm font-bold text-white">{miner.dailyOutput}</div>
                     </div>
                   </div>
 
+                  {/* Botones compactos */}
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button variant="outline" size="sm" className="flex-1 text-xs">
                       Configurar
                     </Button>
                     <Button 
                       variant={miner.status === 'Mining' ? 'secondary' : 'primary'} 
                       size="sm" 
-                      className="flex-1"
+                      className="flex-1 text-xs"
                     >
                       {miner.status === 'Mining' ? 'Detener' : 'Activar'}
                     </Button>
-                    <Button variant="primary" size="sm" className="flex-1 bg-green-600 hover:bg-green-700">
+                    <Button variant="primary" size="sm" className="flex-1 text-xs bg-green-600 hover:bg-green-700">
                       Reclamar
                     </Button>
                   </div>

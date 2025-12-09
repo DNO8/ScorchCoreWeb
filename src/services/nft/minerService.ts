@@ -78,19 +78,26 @@ export class MinerService {
     owner: string
   ): Promise<CoreMinerNFT | null> {
     try {
-      // 1. Obtener datos on-chain
+      // 1. Obtener datos on-chain (ahora incluye minerNameIndex)
       const minerData = await this.contract.getMinerData(tokenId);
 
-      // 2. Obtener metadatos
+      // 2. Extraer minerType y minerNameIndex
+      const minerType = Number(minerData.minerType);
+      const minerNameIndex = Number(minerData.minerNameIndex);
+
+      // 3. Obtener nombre real del miner usando el helper
+      const { getMinerName } = await import('@/lib/utils/minerNames');
+      const realMinerName = getMinerName(minerType, minerNameIndex);
+
+      // 4. Obtener metadatos
       const metadata = await this.getMinerMetadata(tokenId, minerData);
 
-      // 3. Determinar stage y axieType desde minerType (basado en el nuevo sistema)
-      const minerType = Number(minerData.minerType);
+      // 5. Determinar stage y axieType desde minerType
       const { stage, axieType } = this.getMinerTypeMapping(minerType);
 
       return {
         tokenId,
-        name: metadata.name,
+        name: realMinerName, // ← Ahora usamos el nombre real
         stage,
         axieType,
         rarity: this.calculateRarity(minerData.power, minerData.efficiency) as any,
