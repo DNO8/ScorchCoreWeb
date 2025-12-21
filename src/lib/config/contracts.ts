@@ -80,10 +80,10 @@ const MAINNET_CONTRACTS: ContractAddresses = {
 const TESTNET_CONTRACTS: ContractAddresses = {
   // Mock Tokens (from deployment-testnet.json)
   // Tokens (REDESPLIEGUE COMPLETO Nov 17, 2025)
-  axsToken: '0x2f06F03bcbE94c7970b97D8Ddd5793a7beDE26b3', // MockAXS ✅ NUEVO
-  slpToken: '0x1cd1459a4A4400F35313d7C0f41e3d80FF21Fc67', // MockSLP ✅ NUEVO // MockSLP
+  axsToken: '0x2f06F03bcbE94c7970b97D8Ddd5793a7beDE26b3', // MockAXS ✅ 
+  slpToken: '0x1cd1459a4A4400F35313d7C0f41e3d80FF21Fc67', // MockSLP ✅ 
   coreToken: '0x236E0F5652e8f8863C1CB1E599bB309020a76539', // MockCORE
-  fCoreToken: '0x66871e6949493f02b81047693430ac2Fda3bcC98', // fCORE (recompensas de mining) ✅
+  fCoreToken: '0x66871e6949493f02b81047693430ac2Fda3bcC98', // fCORE (recompensas de mining) 
   
   // Memento Tokens (REDESPLIEGUE Nov 17, 2025 - 9 mementos específicos por clase)
   mementos: {

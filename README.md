@@ -2,6 +2,20 @@
 
 **ScorchCore Web** es una aplicación descentralizada (dApp) construida con **Next.js** que permite a los usuarios participar en el ecosistema de minería de **ScorchCore Protocol**. Los usuarios pueden forjar geodas cristalinas únicas, eclosionarlas en CoreMiners, y gestionar su inventario de activos NFT.
 
+## 📚 Tabla de Contenidos
+
+- [Características Principales](#-características-principales)
+- [Stack Tecnológico](#%EF%B8%8F-stack-tecnológico)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Instalación y Setup](#-instalación-y-setup)
+- [Configuración de Contratos](#%EF%B8%8F-configuración-de-contratos)
+- [Uso de la Aplicación](#-uso-de-la-aplicación)
+- [Integración Web3](#-integración-web3)
+- [Testing](#-testing)
+- [Build y Deployment](#-build-y-deployment)
+- [Troubleshooting](#-troubleshooting)
+- [Contribuir](#-contribuir)
+
 ## 🎮 Características Principales
 
 ### 1. **Forja de Geodas** 🔥
@@ -53,8 +67,8 @@
 - **ERC20 Tokens** - AXS, SLP, Mementos
 
 ### Blockchain
-- **Ethereum** (o red compatible)
-- **MetaMask** para autenticación
+- **Ronin Network** (Mainnet y Testnet Saigon)
+- **MetaMask** o wallet Web3 compatible
 
 ## 📁 Estructura del Proyecto
 
@@ -130,37 +144,7 @@ npm install
 yarn install
 ```
 
-3. **Configurar variables de entorno:**
-
-Crear archivo `.env.local` en la raíz del proyecto:
-
-```env
-# Contratos inteligentes
-NEXT_PUBLIC_SCORCH_HEART_TRANSMUTER=0x...
-NEXT_PUBLIC_GEODE_NFT=0x...
-NEXT_PUBLIC_CORE_MINER_NFT=0x...
-NEXT_PUBLIC_AXS_TOKEN=0x...
-NEXT_PUBLIC_SLP_TOKEN=0x...
-
-# Direcciones de Mementos (una por clase)
-NEXT_PUBLIC_MEMENTO_BEAST=0x...
-NEXT_PUBLIC_MEMENTO_AQUA=0x...
-NEXT_PUBLIC_MEMENTO_BIRD=0x...
-NEXT_PUBLIC_MEMENTO_REPTILE=0x...
-NEXT_PUBLIC_MEMENTO_BUG=0x...
-NEXT_PUBLIC_MEMENTO_PLANT=0x...
-NEXT_PUBLIC_MEMENTO_MECH=0x...
-NEXT_PUBLIC_MEMENTO_DUSK=0x...
-NEXT_PUBLIC_MEMENTO_DAWN=0x...
-
-# RPC URL
-NEXT_PUBLIC_RPC_URL=https://...
-
-# Chain ID
-NEXT_PUBLIC_CHAIN_ID=1
-```
-
-4. **Ejecutar el servidor de desarrollo:**
+3. **Ejecutar el servidor de desarrollo:**
 
 ```bash
 npm run dev
@@ -168,9 +152,54 @@ npm run dev
 yarn dev
 ```
 
-5. **Abrir en el navegador:**
+4. **Abrir en el navegador:**
 
 Navega a [http://localhost:3000](http://localhost:3000)
+
+## ⚙️ Configuración de Contratos
+
+Este proyecto utiliza un sistema de **direcciones hardcodeadas con type-safety** en lugar de variables de entorno (`.env`). Esta decisión arquitectónica se tomó por las siguientes razones:
+
+### ¿Por qué no usamos `.env` para direcciones de contratos?
+
+| Aspecto | Variables de Entorno | Hardcoded (actual) |
+|---------|---------------------|--------------------|
+| **Seguridad** | No aplica - direcciones son públicas en blockchain | No aplica |
+| **Type-safety** | ❌ Sin validación TypeScript | ✅ Tipado completo |
+| **Simplicidad** | Requiere configuración manual | ✅ Funciona out-of-the-box |
+| **Multi-red** | Manual por entorno | ✅ Automático por chainId |
+
+### Arquitectura de Configuración
+
+Las direcciones de contratos están centralizadas en `src/lib/config/contracts.ts`:
+
+```typescript
+// Selección automática por red
+export function getContractAddresses(chainId: number): ContractAddresses {
+  switch (chainId) {
+    case 2020: return MAINNET_CONTRACTS;  // Ronin Mainnet
+    case 2021: return TESTNET_CONTRACTS;  // Ronin Testnet (Saigon)
+    default: return TESTNET_CONTRACTS;
+  }
+}
+```
+
+### Redes Soportadas
+
+| Red | Chain ID | Estado |
+|-----|----------|--------|
+| Ronin Mainnet | 2020 | Pendiente deploy |
+| Ronin Testnet (Saigon) | 2021 | ✅ Activo |
+
+### Modificar Direcciones de Contratos
+
+Para actualizar direcciones (ej: nuevo deploy):
+
+1. Editar `src/lib/config/contracts.ts`
+2. Modificar el objeto `TESTNET_CONTRACTS` o `MAINNET_CONTRACTS`
+3. Rebuild y redeploy la aplicación
+
+> **Nota**: Las URLs de RPC están configuradas en `src/lib/config/wagmi.ts`
 
 ## 📖 Uso de la Aplicación
 
@@ -287,13 +316,26 @@ O conectar el repositorio a Vercel y habilitar auto-deployment en push.
 ## 🐛 Troubleshooting
 
 ### Problema: "Wallet no conectada"
-- Solución: Instala MetaMask y conecta la red correcta
+- **Causa**: MetaMask no instalado o red incorrecta
+- **Solución**: Instala MetaMask y agrega Ronin Network manualmente o usa el botón de cambio de red en la app
+
+### Problema: "Red no soportada"
+- **Causa**: Wallet conectada a una red diferente a Ronin
+- **Solución**: Cambia a Ronin Testnet (Chain ID: 2021) o Mainnet (Chain ID: 2020)
 
 ### Problema: "Tokens insuficientes"
-- Solución: Obtén tokens en el faucet de testnet
+- **Causa**: Balance insuficiente de AXS, SLP o Mementos
+- **Solución**: En testnet, usa el faucet integrado en la app o contacta al equipo
 
 ### Problema: "Transacción rechazada"
-- Solución: Verifica que hayas aprobado los tokens correctamente
+- **Causa**: Tokens no aprobados o gas insuficiente
+- **Solución**: 
+  1. Verifica que hayas aprobado los tokens (AXS, SLP, Memento)
+  2. Asegúrate de tener RON suficiente para gas
+
+### Problema: "Contrato no encontrado"
+- **Causa**: Direcciones de contratos incorrectas o red equivocada
+- **Solución**: Verifica que estés en la red correcta y que `contracts.ts` tenga las direcciones actualizadas
 
 ## 🤝 Contribuir
 
@@ -313,5 +355,6 @@ Para preguntas o soporte, contacta a: soporte@scorchcore.xyz
 
 ---
 
-**Última actualización**: Diciembre 2025
-**Versión**: 1.0.0
+**Última actualización**: 21 Diciembre 2025  
+**Versión**: 1.0.0  
+**Red Principal**: Ronin Network
