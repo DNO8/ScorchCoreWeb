@@ -309,7 +309,7 @@ Este proyecto está bajo la Licencia MIT. Ver archivo `LICENSE` para más detall
 
 ## 📧 Contacto
 
-Para preguntas o soporte, contacta a: support@scorchcore.com
+Para preguntas o soporte, contacta a: soporte@scorchcore.xyz
 
 ---
 
