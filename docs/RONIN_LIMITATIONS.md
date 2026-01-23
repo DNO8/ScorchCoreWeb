@@ -1,5 +1,8 @@
 # ⚠️ Limitaciones de Ronin Testnet
 
+> **📌 NOTA (Enero 2026):** El batching (Solución 1) ya está **implementado y funcional** en `InventoryFacade.ts`. 
+> Este documento se mantiene como referencia del problema y posibles mejoras futuras.
+
 ## 🚫 **Límite de Bloques en eth_getLogs**
 
 ### **Error:**
@@ -262,11 +265,31 @@ queryFilter(filter, currentBlock - 500, "latest")
 
 ---
 
-## ✅ **Estado Actual**
+## ✅ **Estado Actual (Actualizado: Enero 2026)**
 
 ```
-Inventario: Funcional con límite de 500 bloques
-- ✅ Muestra geodas de últimos ~25 minutos
-- ✅ Suficiente para testnet
-- ⏳ Mejora pendiente para mainnet
+Inventario: ✅ BATCHING IMPLEMENTADO (Solución 1)
+- ✅ Busca en últimos 10,000 bloques (~8 horas de historia)
+- ✅ Usa chunks de 499 bloques con retry logic
+- ✅ Método searchForgedEventsInChunks en InventoryFacade.ts
+- ✅ Cubre casos de uso de testnet y early mainnet
+- 🔜 Para escalar: considerar Indexer (Solución 2)
 ```
+
+**Implementación actual en `InventoryFacade.ts`:**
+```typescript
+// Líneas 65-79
+const totalBlocksToSearch = 10000; // ~8 horas
+const chunkSize = 499; // Menor a 500 para seguridad
+const startBlock = Math.max(0, currentBlock - totalBlocksToSearch);
+
+const allForgedEvents = await this.searchForgedEventsInChunks(
+  forgeContract,
+  userAddress,
+  startBlock,
+  currentBlock,
+  chunkSize
+);
+```
+
+**Estado:** ✅ Fase 2 completada - Batching funcional en producción

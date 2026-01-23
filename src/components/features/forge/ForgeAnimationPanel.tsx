@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { GeodeCategory, AxieClass } from '@/lib/constants/geodes';
 import { Modal, Button } from '@/components/ui';
 import { GeodeVideo } from '@/components/GeodeVideo';
+import { createServiceLogger } from '@/lib/utils/logger';
+
+const log = createServiceLogger('ForgeAnimationPanel');
 
 export type ForgeStage = 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'success' | 'fail';
 
@@ -138,7 +141,10 @@ export function ForgeAnimationPanel({
           className="w-full h-full object-contain"
           onEnded={handleVideoEnded}
           onError={(e) => {
-            console.error('Error loading forge video:', getVideoPath(stage));
+            log.error('Failed to load forge animation video', undefined, { 
+              stage, 
+              videoPath: getVideoPath(stage) 
+            });
           }}
         >
           <source src={getVideoPath(stage)} type="video/mp4" />

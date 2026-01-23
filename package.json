@@ -1,5 +1,5 @@
 {
-  "name": "ScorchCore-V1",
+  "name": "scorchcore-v1",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,7 +16,7 @@
     "ethers": "^6.15.0",
     "gsap": "^3.13.0",
     "lucide-react": "^0.548.0",
-    "next": "^16.0.8",
+    "next": "^16.0.10",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "viem": "^2.38.5",

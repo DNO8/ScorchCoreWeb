@@ -8,6 +8,9 @@ import {
   isCategoryAvailable,
   hasGeodeVideos
 } from '@/lib/constants/geodes';
+import { createServiceLogger } from '@/lib/utils/logger';
+
+const log = createServiceLogger('GeodeVideo');
 
 interface GeodeVideoProps {
   category: GeodeCategory;
@@ -33,15 +36,6 @@ export function GeodeVideo({
   const videoPath = getGeodeVideoPath(category, axieClass);
   const isAvailable = isCategoryAvailable(category);
   const hasVideos = hasGeodeVideos(category);
-
-  // Debug: mostrar qué video se está cargando
-  console.log('🎬 GeodeVideo:', {
-    category: categoryInfo.name,
-    class: classInfo.displayName,
-    videoPath,
-    isAvailable,
-    hasVideos
-  });
 
   // Si la categoría no está disponible o no tiene videos, mostrar fallback
   if (!isAvailable || !hasVideos) {
@@ -73,7 +67,11 @@ export function GeodeVideo({
         preload="auto"
         className="w-full h-full object-contain"
         onError={(e) => {
-          console.error('Error loading geode video:', videoPath);
+          log.error('Failed to load geode video', undefined, { 
+            videoPath, 
+            category: categoryInfo.name,
+            class: classInfo.displayName 
+          });
           // Ocultar el video si falla
           e.currentTarget.style.display = 'none';
         }}
@@ -83,7 +81,7 @@ export function GeodeVideo({
       
       {/* Gradient overlay para mejor apariencia */}
       <div 
-        className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"
+        className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent pointer-events-none"
         style={{
           background: `linear-gradient(to top, ${categoryInfo.color}20, transparent)`
         }}
@@ -141,7 +139,7 @@ export function GeodeCard({
       
       {/* Contenido encima */}
       <div 
-        className="relative z-10 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent"
+        className="relative z-10 p-6 bg-linear-to-t from-black/80 via-black/40 to-transparent"
         style={{
           background: `linear-gradient(to top, ${categoryInfo.color}80, ${categoryInfo.color}40, transparent)`
         }}

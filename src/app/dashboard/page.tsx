@@ -4,15 +4,134 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useUserData } from '@/lib/hooks/useUserData';
+import { useMetadataService } from '@/lib/hooks/useMetadataService';
+import { useCycleManager, usefCoreBalance } from '@/lib/hooks';
 import { Card, Button, Badge, Loading } from '@/components/ui';
-import { getMinerVideoPath } from '@/lib/utils/minerNames';
+import { getMinerVideoUrl } from '@/lib/utils/minerNames';
+import { MinerLockedIndicator } from '@/components/cycle';
+import { fCoreBalanceCard as FCoreBalanceCard, PohVerificationBanner, fCoreExplanationModal as FCoreExplanationModal } from '@/components/fcore';
+import { AxieCard } from '@/components/axie/AxieCard';
+import { MinerStatsHistoryCard, MinerPerformanceChart, MinerComparisonTable } from '@/components/minerstats';
+import { useMinerStatsHistory, useMinerComparison } from '@/lib/hooks/useMinerStatsHistory';
+import { useMinerActions } from '@/lib/hooks/useMinerActions';
+import { MinerConfigModal } from '@/components/miner/MinerConfigModal';
+import { CycleDuration } from '@/lib/contracts/interfaces/ICycleContract';
+import { TokenPriceCard } from '@/components/price';
+import { CollectionProgressCard } from '@/components/collection';
 import Link from 'next/link';
+import { useAxies } from '@/lib/hooks/useAxies';
+import { Toast, useToast } from '@/components/ui';
+
+// Componente separado para Stats Tab (evita hooks condicionales)
+function StatsTab({ 
+  displayMiners, 
+  selectedMinerForStats, 
+  setSelectedMinerForStats 
+}: { 
+  displayMiners: any[]; 
+  selectedMinerForStats: bigint | null;
+  setSelectedMinerForStats: (id: bigint | null) => void;
+}) {
+  // Hooks SIEMPRE se llaman (no condicionales)
+  const minerIds = displayMiners.map(m => BigInt(m.id));
+  const { stats: selectedStats, health, isLoading: isLoadingStats } = useMinerStatsHistory(selectedMinerForStats || BigInt(0));
+  const { comparisons, averages, isLoading: isLoadingComparison } = useMinerComparison(minerIds.length > 0 ? minerIds : [BigInt(0)]);
+
+  if (displayMiners.length === 0) {
+    return (
+      <Card variant="glass" className="p-12 text-center">
+        <div className="text-6xl mb-4">📊</div>
+        <h3 className="text-2xl font-bold text-white mb-2">No hay estadísticas disponibles</h3>
+        <p className="text-gray-400 mb-6">Necesitas tener CoreMiners para ver sus estadísticas</p>
+        <Link href="/forge">
+          <Button variant="primary">Ir a la Forja</Button>
+        </Link>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Selector de Miner */}
+      <Card variant="gradient" className="p-6">
+        <h3 className="text-lg font-bold text-white mb-4">Selecciona un Miner</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {displayMiners.map((miner) => (
+            <button
+              key={miner.id}
+              onClick={() => setSelectedMinerForStats(BigInt(miner.id))}
+              className={`p-3 rounded-lg border-2 transition-all ${
+                selectedMinerForStats?.toString() === miner.id.toString()
+                  ? 'border-orange-500 bg-orange-500/20'
+                  : 'border-gray-700 bg-slate-800 hover:border-gray-600'
+              }`}
+            >
+              <div className="text-sm font-medium text-white">#{miner.id}</div>
+              <div className="text-xs text-gray-400">{miner.type}</div>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Stats del Miner Seleccionado */}
+      {selectedMinerForStats && (
+        <>
+          {isLoadingStats ? (
+            <div className="flex items-center justify-center p-12">
+              <Loading size="lg" text="Cargando estadísticas..." />
+            </div>
+          ) : !selectedStats || !health ? (
+            <Card variant="glass" className="p-8 text-center">
+              <p className="text-gray-400">No se pudieron cargar las estadísticas</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <MinerStatsHistoryCard stats={selectedStats} health={health} />
+              <MinerPerformanceChart stats={selectedStats} />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Comparación de Miners */}
+      {displayMiners.length > 1 && (
+        <>
+          {isLoadingComparison ? (
+            <div className="flex items-center justify-center p-12">
+              <Loading size="lg" text="Comparando miners..." />
+            </div>
+          ) : (
+            <MinerComparisonTable 
+              comparisons={comparisons} 
+              averages={averages}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
   const { address, isConnected, balance, balanceSymbol, disconnect } = useWallet();
   const { axies, miners, stats, isLoading: isLoadingData } = useUserData();
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'axies' | 'coreminers'>('overview');
+  const metadataService = useMetadataService();
+  const { activeCycles, totalMinersLocked, averageBonus, refreshCycles } = useCycleManager();
+  const { axies: axiesHook, isLoading: isAxiesLoading, stakeAxie, unstakeAxie } = useAxies();
+  const { toast, showSuccess, showError, hideToast } = useToast();
+  const { systemInfo, isLoading: isLoadingfCore, convertAll, hasfCoreBalance, needsPohVerification } = usefCoreBalance();
+  const { activateMiner, deactivateMiner, claimRewards, isProcessing: isMinerActionProcessing } = useMinerActions();
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'axies' | 'coreminers' | 'stats'>('overview');
+  const [showfCoreModal, setShowfCoreModal] = React.useState(false);
+  const [selectedMinerForStats, setSelectedMinerForStats] = React.useState<bigint | null>(null);
+  const [configModalOpen, setConfigModalOpen] = React.useState(false);
+  const [selectedMinerForConfig, setSelectedMinerForConfig] = React.useState<{ id: bigint; name: string } | null>(null);
+
+  // Handler para conversión de fCORE
+  const handleConvertfCore = async () => {
+    await convertAll();
+  };
 
   // Redirect si no está conectado
   React.useEffect(() => {
@@ -78,40 +197,74 @@ export default function DashboardPage() {
     isStaked: axie.isStaked,
   }));
 
-  // Convertir datos de mineros
-  const displayMiners = miners.map((miner) => {
-    // NOTA: El contrato actual solo retorna minerType (0-8) que representa la clase de Axie
-    // Por ahora todos los miners son PETIT (stage no viene del contrato)
-    // minerType se mapea a las clases de Axie que coinciden con las carpetas
+  // Convertir datos de mineros - USA DATOS LOCALES directamente
+  const displayMiners = React.useMemo(() => {
+    return miners.map((miner) => {
+      const basePower = miner.miningPower || 100;
+      const efficiency = miner.efficiency || 100;
+      const dailyOutput = (basePower * efficiency / 100).toFixed(2);
+      
+      // Verificar si el miner está bloqueado en un ciclo
+      const isInCycle = activeCycles.some(cycle => 
+        cycle.minerIds.some(id => id === miner.tokenId)
+      );
+      
+      return {
+        id: miner.tokenId.toString(),
+        name: miner.name,
+        type: miner.metadata?.attributes?.find(a => a.trait_type === 'Type')?.value || 'Unknown',
+        category: miner.metadata?.attributes?.find(a => a.trait_type === 'Category')?.value || 0,
+        power: basePower,
+        status: isInCycle ? 'Mining' : 'Idle',
+        efficiency,
+        dailyOutput,
+        videoUrl: miner.videoUrl || '' // Video local desde NFTFacade
+      };
+    });
+  }, [miners, activeCycles]);
+
+  // Handlers para acciones de miners
+  const handleConfigureMiner = React.useCallback((minerId: string, minerName: string) => {
+    setSelectedMinerForConfig({ id: BigInt(minerId), name: minerName });
+    setConfigModalOpen(true);
+  }, []);
+
+  const handleActivateMiner = React.useCallback(async (duration: CycleDuration) => {
+    if (!selectedMinerForConfig) return;
+
+    const result = await activateMiner(selectedMinerForConfig.id, duration);
     
-    const classNames: Record<number, string> = {
-      0: 'BESTIA',   // Beast (aunque PETIT no tiene esta carpeta)
-      1: 'AQUA',     // Aqua
-      2: 'AVE',      // Bird
-      3: 'REPTIL',   // Reptile
-      4: 'BICHO',    // Bug
-      5: 'PLANTA',   // Plant
-      6: 'MECH',     // Mech
-      7: 'DUSK',     // Dusk
-      8: 'DAWN'      // Dawn (aunque PETIT no tiene esta carpeta)
-    };
+    if (result.success) {
+      showSuccess(`¡${selectedMinerForConfig.name} activado! Tx: ${result.transactionHash?.slice(0, 10)}...`);
+      setConfigModalOpen(false);
+      setSelectedMinerForConfig(null);
+      // Recargar ciclos para actualizar UI
+      await refreshCycles();
+    } else {
+      showError(result.error || 'Error al activar miner');
+    }
+  }, [selectedMinerForConfig, activateMiner, showSuccess, showError, refreshCycles]);
+
+  const handleDeactivateMiner = React.useCallback(async (minerId: string) => {
+    const result = await deactivateMiner(BigInt(minerId));
     
-    // Por ahora todos los miners son PETIT (el contrato no almacena categoría)
-    const categoryName = 'PETIT';
-    const className = classNames[Number(miner.minerType)] || 'AQUA';
-    const videoPath = getMinerVideoPath(categoryName, className, miner.name);
+    if (result.success) {
+      showSuccess(`Miner desactivado! Tx: ${result.transactionHash?.slice(0, 10)}...`);
+      await refreshCycles();
+    } else {
+      showError(result.error || 'Error al desactivar miner');
+    }
+  }, [deactivateMiner, showSuccess, showError, refreshCycles]);
+
+  const handleClaimRewards = React.useCallback(async (minerId: string) => {
+    const result = await claimRewards(BigInt(minerId));
     
-    return {
-      id: miner.tokenId.toString(),
-      name: miner.name || 'CoreMiner',
-      type: getMinerTypeName(Number(miner.minerType)),
-      power: miner.miningPower ? Number(miner.miningPower) : 0,
-      status: 'Idle', // TODO: Obtener del contrato de mining
-      efficiency: miner.efficiency ? Number(miner.efficiency) : 0,
-      dailyOutput: '0', // TODO: Calcular desde el contrato
-      videoPath: videoPath,
-    };
-  });
+    if (result.success) {
+      showSuccess(`¡Recompensas reclamadas! Tx: ${result.transactionHash?.slice(0, 10)}...`);
+    } else {
+      showError(result.error || 'Error al reclamar recompensas');
+    }
+  }, [claimRewards, showSuccess, showError]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -124,7 +277,7 @@ export default function DashboardPage() {
             <Card variant="glass" className="flex-1 p-8">
               <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
                 <div className="relative">
-                  <div className="h-24 w-24 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-4xl">
+                  <div className="h-24 w-24 rounded-full bg-linear-to-br from-orange-500 to-red-600 flex items-center justify-center text-4xl">
                     🔥
                   </div>
                   <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 rounded-full border-4 border-black flex items-center justify-center">
@@ -132,7 +285,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex-1">
-                  <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+                  <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
                     Prospector #{address?.slice(-4)}
                   </h1>
                   <div className="flex items-center gap-3 mb-3">
@@ -206,14 +359,101 @@ export default function DashboardPage() {
             >
               💎 Mis CoreMiners ({displayMiners.length})
             </button>
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`pb-4 px-4 font-medium transition-colors ${
+                activeTab === 'stats'
+                  ? 'text-orange-500 border-b-2 border-orange-500'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              📊 Estadísticas Miners
+            </button>
           </div>
         </div>
       </section>
 
+      {/* Cycles Summary Card */}
+      {activeCycles.length > 0 && (
+        <section className="container mx-auto px-4 py-6">
+          <Card variant="gradient" className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-1">🕒 Ciclos Activos</h2>
+                <p className="text-sm text-gray-400">
+                  {activeCycles.length} ciclo{activeCycles.length !== 1 ? 's' : ''} en progreso
+                </p>
+              </div>
+              <Link href="/staking">
+                <Button variant="outline" size="sm">
+                  Ver Detalles →
+                </Button>
+              </Link>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-black/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">🔒</span>
+                  <span className="text-sm text-gray-400">Miners Bloqueados</span>
+                </div>
+                <p className="text-3xl font-bold text-white">{totalMinersLocked}</p>
+              </div>
+              
+              <div className="bg-black/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">📈</span>
+                  <span className="text-sm text-gray-400">Bonus Promedio</span>
+                </div>
+                <p className="text-3xl font-bold text-purple-400">+{averageBonus.toFixed(1)}%</p>
+              </div>
+              
+              <div className="bg-black/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">⏰</span>
+                  <span className="text-sm text-gray-400">Próximo a Terminar</span>
+                </div>
+                <p className="text-lg font-bold text-amber-400">
+                  {activeCycles[0] && activeCycles[0].timeRemaining > 0
+                    ? `${Math.floor(activeCycles[0].timeRemaining / 86400)}d ${Math.floor((activeCycles[0].timeRemaining % 86400) / 3600)}h`
+                    : 'Terminado'}
+                </p>
+              </div>
+            </div>
+          </Card>
+        </section>
+      )}
+
+      {/* Stats Overview */}
       <div className="container mx-auto px-4 py-8">
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <>
+        {/* PoH Verification Banner */}
+        {needsPohVerification && systemInfo && (
+          <div className="mb-6">
+            <PohVerificationBanner
+              isVerified={systemInfo.pohVerification.isVerified}
+              verificationLevel={systemInfo.pohVerification.level}
+              expiresAt={systemInfo.pohVerification.expiresAt}
+              onConvert={async () => {
+                try {
+                  const result = await convertAll();
+                  if (result.success) {
+                    showSuccess('fCORE convertido exitosamente a CORE', '✅ Conversión Exitosa');
+                  } else {
+                    showError(result.error || 'Error al convertir fCORE', '❌ Error');
+                  }
+                } catch (error) {
+                  const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+                  showError(errorMessage, '❌ Error');
+                }
+              }}
+              isLoading={isLoadingfCore}
+            />
+          </div>
+        )}
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card variant="glass" className="p-6">
@@ -368,7 +608,7 @@ export default function DashboardPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg border border-gray-800">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
+                <div className="h-12 w-12 rounded-lg bg-linear-to-br from-orange-500 to-red-600 flex items-center justify-center">
                   <span className="text-2xl">🔨</span>
                 </div>
                 <div>
@@ -381,7 +621,7 @@ export default function DashboardPage() {
 
             <div className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg border border-gray-800">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                <div className="h-12 w-12 rounded-lg bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center">
                   <span className="text-2xl">⛏️</span>
                 </div>
                 <div>
@@ -394,7 +634,7 @@ export default function DashboardPage() {
 
             <div className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg border border-gray-800">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                <div className="h-12 w-12 rounded-lg bg-linear-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
                   <span className="text-2xl">🎮</span>
                 </div>
                 <div>
@@ -464,14 +704,24 @@ export default function DashboardPage() {
               <h2 className="text-2xl font-bold text-white mb-2">Mis CoreMiners</h2>
               <p className="text-gray-400">Gestiona tus CoreMiners y optimiza la minería</p>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {displayMiners.map((miner) => (
+            
+            {/* Loading State */}
+            {isLoadingData && (
+              <Card variant="glass" className="p-12 text-center">
+                <Loading size="lg" text="Cargando CoreMiners..." />
+              </Card>
+            )}
+            
+            {/* Miners Grid */}
+            {!isLoadingData && displayMiners.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {displayMiners.map((miner) => (
                 <Card key={miner.id} variant="gradient" className="p-4">
                   {/* Video del CoreMiner - Tamaño completo */}
-                  <div className="aspect-square rounded-lg overflow-hidden bg-black/20 mb-4">
-                    {miner.videoPath ? (
+                  <div className="aspect-square rounded-lg overflow-hidden bg-black/20 mb-4 relative">
+                    {miner.videoUrl ? (
                       <video
-                        src={miner.videoPath}
+                        src={miner.videoUrl}
                         autoPlay
                         loop
                         muted
@@ -479,10 +729,12 @@ export default function DashboardPage() {
                         className="w-full h-full object-contain"
                       />
                     ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-6xl">
+                      <div className="h-full w-full bg-linear-to-br from-orange-500 to-red-600 flex items-center justify-center text-6xl">
                         💎
                       </div>
                     )}
+                    {/* Overlay de miner bloqueado */}
+                    <MinerLockedIndicator minerId={BigInt(miner.id)} variant="overlay" />
                   </div>
 
                   {/* Header compacto */}
@@ -516,26 +768,45 @@ export default function DashboardPage() {
 
                   {/* Botones compactos */}
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 text-xs">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 text-xs"
+                      onClick={() => handleConfigureMiner(miner.id, miner.name)}
+                      disabled={isMinerActionProcessing || miner.status === 'Mining'}
+                    >
                       Configurar
                     </Button>
                     <Button 
                       variant={miner.status === 'Mining' ? 'secondary' : 'primary'} 
                       size="sm" 
                       className="flex-1 text-xs"
+                      onClick={() => 
+                        miner.status === 'Mining' 
+                          ? handleDeactivateMiner(miner.id)
+                          : handleConfigureMiner(miner.id, miner.name)
+                      }
+                      disabled={isMinerActionProcessing}
                     >
-                      {miner.status === 'Mining' ? 'Detener' : 'Activar'}
+                      {isMinerActionProcessing ? 'Procesando...' : (miner.status === 'Mining' ? 'Detener' : 'Activar')}
                     </Button>
-                    <Button variant="primary" size="sm" className="flex-1 text-xs bg-green-600 hover:bg-green-700">
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      className="flex-1 text-xs bg-green-600 hover:bg-green-700"
+                      onClick={() => handleClaimRewards(miner.id)}
+                      disabled={isMinerActionProcessing || miner.status !== 'Mining'}
+                    >
                       Reclamar
                     </Button>
                   </div>
                 </Card>
               ))}
-            </div>
+              </div>
+            )}
 
-            {/* Empty State si no hay miners */}
-            {displayMiners.length === 0 && (
+            {/* Empty State si no hay miners Y no está cargando */}
+            {!isLoadingData && displayMiners.length === 0 && (
               <Card variant="glass" className="p-12 text-center">
                 <div className="text-6xl mb-4">💎</div>
                 <h3 className="text-2xl font-bold text-white mb-2">No tienes CoreMiners</h3>
@@ -547,7 +818,83 @@ export default function DashboardPage() {
             )}
           </div>
         )}
+
+        {/* Modal de Configuración de Miner */}
+        {selectedMinerForConfig && (
+          <MinerConfigModal
+            isOpen={configModalOpen}
+            onClose={() => {
+              setConfigModalOpen(false);
+              setSelectedMinerForConfig(null);
+            }}
+            onConfirm={handleActivateMiner}
+            minerName={selectedMinerForConfig.name}
+            isProcessing={isMinerActionProcessing}
+          />
+        )}
+
+        {/* Tab Stats */}
+        {activeTab === 'stats' && (
+          <StatsTab 
+            displayMiners={displayMiners}
+            selectedMinerForStats={selectedMinerForStats}
+            setSelectedMinerForStats={setSelectedMinerForStats}
+          />
+        )}
       </div>
+
+      {/* Sección de Axies NFT */}
+      {axiesHook.length > 0 && (
+        <div className="mt-12">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-white mb-2">🐉 Mis Axies</h2>
+            <p className="text-gray-400">Stakea tus Axies para obtener bonos de minería</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {axiesHook.map((axie) => (
+              <AxieCard
+                key={axie.tokenId}
+                axie={axie}
+                onStake={async (axieId) => {
+                  try {
+                    await stakeAxie(axieId);
+                    showSuccess('Axie stakeado exitosamente', '✅ Éxito');
+                  } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+                    showError(`Error al stakear: ${errorMessage}`, '❌ Error');
+                  }
+                }}
+                onUnstake={async (axieId) => {
+                  try {
+                    await unstakeAxie(axieId);
+                    showSuccess('Axie unstakeado exitosamente', '✅ Éxito');
+                  } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+                    showError(`Error al unstakear: ${errorMessage}`, '❌ Error');
+                  }
+                }}
+                isLoading={isAxiesLoading}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* fCore Explanation Modal */}
+      <FCoreExplanationModal
+        isOpen={showfCoreModal}
+        onClose={() => setShowfCoreModal(false)}
+      />
+
+      {/* Toast para notificaciones */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          title={toast.title}
+          onClose={hideToast}
+        />
+      )}
     </div>
   );
 }

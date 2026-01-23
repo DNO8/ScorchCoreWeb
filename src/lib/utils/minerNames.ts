@@ -1,129 +1,146 @@
 /**
- * Helper para mapear minerType y minerNameIndex a nombres completos de miners
- * Basado en la tabla de loot y los nombres de los archivos de thumbnails
+ * Utilidades para nombres y metadata de miners
+ * 
+ * MIGRADO A PIÑATA:
+ * - Nombres obtenidos desde metadata IPFS/Piñata
+ * - Videos obtenidos desde animation_url en metadata
+ * - Fallback a MetadataService si hay errores
+ * 
+ * ARQUITECTURA:
+ * - Funciones aceptan MetadataService inyectado para aprovechar cache
+ * - Backward compatibility: crean instancia si no se proporciona
+ * - Recomendado: usar con useMetadataService() hook en componentes React
+ * 
+ * @see src/lib/services/nft/MetadataService.ts
+ * @see src/lib/hooks/useMetadataService.ts
  */
 
-// Mapeo completo de nombres según minerType (AxieClass) y minerNameIndex (rarity)
-// IMPORTANTE: Estos nombres DEBEN coincidir EXACTAMENTE con los archivos de video
-// Los nombres de video NO tienen acentos, solo Ñ
-const MINER_NAMES: Record<number, string[]> = {
-  // BEAST (0) - TODO: No hay carpeta PETIT BESTIA aún
-  0: [
-    'Cachorro Ágil',
-    'Rastreador Tenaz',
-    'Cazador Joven',
-    'Garra Impaciente',
-    'Cría Feroz',
-    'Explorador Audaz',
-    'Cachorro Alfa'
-  ],
-  
-  // AQUA (1) - Nombres reales de /PETIT/PETIT AQUA/
-  1: [
-    'Burbuja Eficiente',
-    'Chorro Preciso',
-    'Corriente de Tsunami',
-    'Corriente Ligera',
-    'Flujo Sereno',
-    'Gota de Rocío',
-    'Gota Rápida'
-  ],
-  
-  // BIRD/AVE (2) - Nombres reales de /PETIT/PETIT AVE/
-  2: [
-    'Ala Veloz',
-    'Corriente Ascendente',
-    'Gorrión Sónico',
-    'Pequeño Raptor',
-    'Picotazo Preciso',
-    'Pluma Ligera',
-    'Polluelo Vigía'
-  ],
-  
-  // REPTILE/REPTIL (3) - Nombres reales de /PETIT/PETIT REPTIL/
-  3: [
-    'Caimán Soberano',
-    'Cría de Caimán',
-    'Escama Venenosa',
-    'Escudo Resvaladizo',
-    'Gecko Astuto',
-    'Mordida Rápida',
-    'Sangre Fría'
-  ],
-  
-  // BUG/BICHO (4) - Nombres reales de /PETIT/PETIT BICHO/
-  4: [
-    'Escarabajo Resiliente',
-    'Hormiga Exploradora',
-    'Larva Protegida',
-    'Pupa Eficiente',
-    'Zángano Obrero',
-    'Zángano Reina',
-    'Zumbido Silencioso'
-  ],
-  
-  // PLANT/PLANTA (5) - Nombres reales de /PETIT/PETIT PLANTA/
-  5: [
-    'Brote Constante',
-    'Brote Milenario',
-    'Espina Afilada',
-    'Flujo de Savia',
-    'Hoja Perenne',
-    'Rey Joven',
-    'Semilla Durmiente'
-  ],
-  
-  // MECH (6) - Nombres reales de /PETIT/PETIT MECH/
-  6: [
-    'Chispa Precisa',
-    'Circuito Estable',
-    'Drón de Prospección',
-    'Nano Constructor Alfa',
-    'Nano Constructor',
-    'Núcleo de Titaneo',
-    'Pequeño Lobo'
-  ],
-  
-  // DUSK (7) - Nombres reales de /PETIT/PETIT DUSK/
-  7: [
-    'Brillo Afímero',
-    'Cría del Ocaso',
-    'Daga de Sombra',
-    'Espía Crepuscular',
-    'Penumbra Constante',
-    'Sombra Asechante',
-    'Susurro Nocturno'
-  ],
-  
-  // DAWN (8) - TODO: No hay carpeta PETIT DAWN aún
-  8: [
-    'Rayo de Alba',
-    'Brillo Matutino',
-    'Luz Naciente',
-    'Aurora Brillante',
-    'Amanecer Dorado',
-    'Guardián del Alba',
-    'Heraldo del Sol'
-  ]
-};
+import { MetadataService } from '@/lib/services/nft/MetadataService';
+import { createServiceLogger } from '@/lib/utils/logger';
+
+const log = createServiceLogger('MinerNames');
 
 /**
- * Obtiene el nombre completo de un miner basado en su tipo e índice
+ * Obtiene el nombre completo de un miner desde metadata de Piñata
+ * 
+ * @param minerId - ID del miner
+ * @param metadataService - (Opcional) Instancia del servicio para reutilizar cache
+ * @returns Promise con el nombre del miner
+ * 
+ * @example
+ * // En un componente React (RECOMENDADO):
+ * const metadataService = useMetadataService();
+ * const name = await getMinerNameFromMetadata(minerId, metadataService);
+ * 
+ * @example
+ * // Fuera de React (crea instancia nueva):
+ * const name = await getMinerNameFromMetadata(minerId);
  */
-export function getMinerName(minerType: number, minerNameIndex: number): string {
-  const names = MINER_NAMES[minerType];
-  
-  if (!names) {
-    console.warn(`Unknown minerType: ${minerType}`);
-    return `Unknown Miner #${minerType}`;
+export async function getMinerNameFromMetadata(
+  minerId: bigint,
+  metadataService?: MetadataService
+): Promise<string> {
+  try {
+    // Si no se proporciona servicio, crear uno (backward compatibility)
+    const service = metadataService || await createMetadataServiceInstance();
+    
+    const metadata = await service.getCoreMinerMetadata(minerId);
+    
+    if (metadata.name && !metadata.name.includes('Core Miner #')) {
+      return metadata.name;
+    }
+    
+    return `Core Miner #${minerId}`;
+  } catch (error) {
+    log.warn('Failed to fetch miner name from metadata', { minerId: minerId.toString(), error });
+    return `Core Miner #${minerId}`;
   }
-  
-  if (minerNameIndex >= names.length) {
-    console.warn(`Invalid minerNameIndex ${minerNameIndex} for minerType ${minerType}`);
-    return names[0]; // Fallback al primero
+}
+
+/**
+ * Obtiene la URL del video de un miner desde metadata de Piñata
+ * 
+ * @param minerId - ID del miner
+ * @param metadataService - (Opcional) Instancia del servicio para reutilizar cache
+ * @returns Promise con la URL del video
+ * 
+ * @example
+ * // En un componente React (RECOMENDADO):
+ * const metadataService = useMetadataService();
+ * const videoUrl = await getMinerVideoUrl(minerId, metadataService);
+ */
+export async function getMinerVideoUrl(
+  minerId: bigint,
+  metadataService?: MetadataService
+): Promise<string> {
+  try {
+    const service = metadataService || await createMetadataServiceInstance();
+    
+    log.debug('Fetching miner video URL from metadata', { minerId: minerId.toString() });
+    
+    const metadata = await service.getCoreMinerMetadata(minerId);
+    
+    if (metadata.animation_url) {
+      log.info('Video URL found in metadata', { 
+        minerId: minerId.toString(),
+        url: metadata.animation_url.substring(0, 50) + '...'
+      });
+      return metadata.animation_url;
+    }
+    
+    log.debug('No animation_url in metadata, using empty string', { minerId: minerId.toString() });
+    return ''; // No hay video disponible
+  } catch (error) {
+    log.warn('Failed to fetch miner video from metadata', { 
+      minerId: minerId.toString(), 
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return ''; // Fallback a sin video en caso de error
   }
+}
+
+/**
+ * Obtiene la imagen de un miner desde metadata de Piñata
+ * 
+ * @param minerId - ID del miner
+ * @param metadataService - (Opcional) Instancia del servicio para reutilizar cache
+ * @returns Promise con la URL de la imagen
+ * 
+ * @example
+ * // En un componente React (RECOMENDADO):
+ * const metadataService = useMetadataService();
+ * const imageUrl = await getMinerImageUrl(minerId, metadataService);
+ */
+export async function getMinerImageUrl(
+  minerId: bigint,
+  metadataService?: MetadataService
+): Promise<string> {
+  try {
+    const service = metadataService || await createMetadataServiceInstance();
+    
+    const metadata = await service.getCoreMinerMetadata(minerId);
+    
+    if (metadata.image) {
+      return metadata.image;
+    }
+    
+    return '/images/miners/fallback.png';
+  } catch (error) {
+    log.warn('Failed to fetch miner image from metadata', { minerId: minerId.toString(), error });
+    return '/images/miners/fallback.png';
+  }
+}
+
+/**
+ * Helper interno para crear instancia del servicio (backward compatibility)
+ * Solo se usa cuando no se proporciona servicio inyectado
+ */
+async function createMetadataServiceInstance(): Promise<MetadataService> {
+  const { ContractManager } = await import('@/lib/contracts/ContractManager');
+  const { createMetadataService } = await import('@/lib/services/nft/MetadataService');
   
-  return names[minerNameIndex];
+  const contractManager = ContractManager.getInstance();
+  return createMetadataService(contractManager);
 }
 
 /**
@@ -146,47 +163,9 @@ export function getMinerTypeName(minerType: number): string {
 }
 
 /**
- * Convierte un nombre de miner a formato de archivo (para videos/thumbnails)
- * Ej: "Chorro Preciso" -> "CHORRO_PRECISO"
- * Nota: Los archivos usan Ñ mayúscula pero NO usan otros acentos (excepto algunos casos especiales)
- * Por seguridad, mantenemos Ñ y convertimos otros acentos
- */
-export function getMinerFileName(minerName: string): string {
-  return minerName
-    .toUpperCase()
-    .replace(/\s+/g, '_');
-    // Nota: Mantenemos Ñ y otros caracteres especiales tal como están
-    // Los archivos usan: PEQUEÑO (con Ñ), CAÑÓN (con Ñ), POLILLA_BOGÓN (con Ó)
-}
-
-/**
- * Obtiene la ruta completa del video de un miner
- * Basado en category, class y nombre
- * NOTA: Los videos usan ESPACIOS en los nombres, NO guiones bajos
- * NOTA: Los videos NO tienen acentos (á→A, é→E, etc.)
- */
-export function getMinerVideoPath(
-  category: string,
-  axieClass: string,
-  minerName: string
-): string {
-  // Los videos tienen espacios y NO tienen acentos
-  const fileName = minerName
-    .toUpperCase()
-    .normalize('NFD')                    // Descomponer caracteres acentuados
-    .replace(/[\u0300-\u036f]/g, '')    // Quitar marcas diacríticas (acentos)
-    .replace(/Ñ/g, 'Ñ');                // Mantener Ñ (por si se quitó)
-  
-  // Para ULTRAMECH, las subcarpetas usan "ULTRA" en lugar de "ULTRAMECH"
-  const subfolder = category === 'ULTRAMECH' ? 'ULTRA' : category;
-  return `/images/miners/${category}/${subfolder} ${axieClass}/${fileName}.mp4`;
-}
-
-/**
  * Determina la rareza basada en el índice del nombre
  */
 export function getMinerRarity(minerNameIndex: number): string {
-  // Los índices 0-5 son common, el 6 es epic
   if (minerNameIndex === 6) return 'epic';
   if (minerNameIndex >= 4) return 'rare';
   if (minerNameIndex >= 2) return 'uncommon';

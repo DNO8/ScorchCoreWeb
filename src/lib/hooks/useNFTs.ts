@@ -1,294 +1,189 @@
 /**
- * Hook para gestionar NFTs (Axies y Mineros)
- * Carga automáticamente los NFTs desde la wallet del usuario
+ * Hook para gestionar NFTs del usuario
+ * 
+ * Proporciona acceso reactivo a Core Miners y Axies NFT del usuario.
+ * Maneja loading states, errores y recarga automática.
+ * 
+ * @category NFT
+ * @example
+ * ```tsx
+ * function InventoryPage() {
+ *   const { miners, axies, isLoading, error, reload } = useNFTs({
+ *     autoLoad: true
+ *   });
+ *   
+ *   if (isLoading) return <Loading />;
+ *   if (error) return <Error message={error} />;
+ *   
+ *   return <NFTGrid miners={miners} axies={axies} />;
+ * }
+ * ```
  */
 
-import { useEffect, useState } from 'react';
-import { useAccount, usePublicClient, useConfig } from 'wagmi';
-import { createAxieService } from '@/services/nft/axieService';
-import { createMinerService } from '@/services/nft/minerService';
-import { ethers } from 'ethers';
-import type { CoreMiner } from '@/types/game';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useAccount } from 'wagmi';
+import { useNFTFacade } from './useNFTFacade';
+import type { CoreMinerNFT, AxieNFT } from '@/lib/facades/NFTFacade';
+import { createServiceLogger } from '@/lib/utils/logger';
 
-interface UseNFTsOptions {
+const logger = createServiceLogger('useNFTs');
+
+/**
+ * Opciones de configuración para useNFTs
+ */
+export interface UseNFTsOptions {
+  /**
+   * Si debe cargar automáticamente al montar el componente
+   * @default true
+   */
   autoLoad?: boolean;
-  stakingContractAddress?: string;
-  minerContractAddress?: string;
+
+  /**
+   * Si debe cargar solo mineros (ignorar Axies)
+   * @default false
+   */
+  minersOnly?: boolean;
+
+  /**
+   * Si debe cargar solo Axies (ignorar mineros)
+   * @default false
+   */
+  axiesOnly?: boolean;
 }
 
-interface AxieNFT {
-  tokenId: string;
-  owner: string;
-  metadata: {
-    id: string;
-    name: string;
-    image: string;
-    class: string;
-    genes: string;
-    stats: {
-      hp: number;
-      speed: number;
-      skill: number;
-      morale: number;
-    };
-  };
-  isStaked: boolean;
+/**
+ * Valor de retorno del hook useNFTs
+ */
+export interface UseNFTsReturn {
+  /** Lista de Core Miners NFT */
+  miners: CoreMinerNFT[];
+  
+  /** Lista de Axies NFT */
+  axies: AxieNFT[];
+  
+  /** Indica si está cargando */
+  isLoading: boolean;
+  
+  /** Indica si está cargando mineros específicamente */
+  isLoadingMiners: boolean;
+  
+  /** Indica si está cargando Axies específicamente */
+  isLoadingAxies: boolean;
+  
+  /** Mensaje de error si ocurrió alguno */
+  error: string | null;
+  
+  /** Función para recargar todos los NFTs */
+  reload: () => Promise<void>;
+  
+  /** Función para recargar solo mineros */
+  reloadMiners: () => Promise<void>;
+  
+  /** Función para recargar solo Axies */
+  reloadAxies: () => Promise<void>;
 }
 
-// Tipo CoreMinerNFT - coincide con el del minerService
-interface CoreMinerNFT extends CoreMiner {
-  metadata: {
-    name: string;
-    description: string;
-    image: string;
-    attributes: Array<{
-      trait_type: string;
-      value: string | number;
-      display_type?: string;
-    }>;
-  };
-}
-
-export function useNFTs(options: UseNFTsOptions = {}) {
+/**
+ * Hook para gestionar NFTs del usuario
+ */
+export function useNFTs(options: UseNFTsOptions = {}): UseNFTsReturn {
   const {
     autoLoad = true,
-    stakingContractAddress,
-    minerContractAddress,
+    minersOnly = false,
+    axiesOnly = false,
   } = options;
 
-  const { address, isConnected, chain } = useAccount();
-  const publicClient = usePublicClient();
+  const { address } = useAccount();
+  const nftFacade = useNFTFacade();
 
-  const [axies, setAxies] = useState<AxieNFT[]>([]);
   const [miners, setMiners] = useState<CoreMinerNFT[]>([]);
-  const [isLoadingAxies, setIsLoadingAxies] = useState(false);
+  const [axies, setAxies] = useState<AxieNFT[]>([]);
   const [isLoadingMiners, setIsLoadingMiners] = useState(false);
+  const [isLoadingAxies, setIsLoadingAxies] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cargar Axies
-  const loadAxies = async () => {
-    if (!address || !publicClient || !chain) return;
-
-    setIsLoadingAxies(true);
-    setError(null);
-
-    try {
-      // Verificar si hay una dirección de contrato Axie configurada (no en mainnet siempre está)
-      // En testnet podría no estar desplegado
-      
-      // Crear provider de ethers desde el RPC de la chain
-      const provider = new ethers.JsonRpcProvider(chain.rpcUrls.default.http[0]);
-      const axieService = createAxieService(provider);
-
-      let loadedAxies: AxieNFT[];
-      if (stakingContractAddress) {
-        // Cargar solo Axies disponibles (no stakeados)
-        loadedAxies = await axieService.getAvailableAxies(
-          address,
-          stakingContractAddress
-        );
-      } else {
-        // Cargar todos los Axies
-        loadedAxies = await axieService.getAxiesFromWallet(address);
-      }
-
-      setAxies(loadedAxies);
-    } catch (err) {
-      // Ahora axieService retorna [] en lugar de lanzar error,
-      // pero mantenemos el catch por si acaso
-      console.warn('⚠️ No se pudieron cargar Axies:', err);
-      setAxies([]); // Array vacío, no mostrar error al usuario
-    } finally {
-      setIsLoadingAxies(false);
+  /**
+   * Carga todos los Core Miners del usuario
+   */
+  const loadMiners = useCallback(async () => {
+    if (!address || axiesOnly) {
+      setMiners([]);
+      return;
     }
-  };
 
-  // Cargar Mineros
-  const loadMiners = async () => {
-    if (!address || !publicClient || !chain || !minerContractAddress) return;
-
+    logger.info('Cargando mineros', { address });
     setIsLoadingMiners(true);
     setError(null);
 
     try {
-      // Crear provider de ethers desde el RPC de la chain
-      const provider = new ethers.JsonRpcProvider(chain.rpcUrls.default.http[0]);
-      const minerService = createMinerService(minerContractAddress, provider);
-      const loadedMiners = await minerService.getMinersFromWallet(address);
+      const loadedMiners = await nftFacade.getMinersFromWallet(address);
       setMiners(loadedMiners);
+      logger.info('Mineros cargados exitosamente', { count: loadedMiners.length });
     } catch (err) {
-      // Si el error es porque el contrato no está desplegado, no mostrar error
-      const errorMsg = err instanceof Error ? err.message : '';
-      if (errorMsg.includes('could not decode result data')) {
-        console.warn('⚠️ Contrato CoreMiner no desplegado o no disponible en esta red.');
-        setMiners([]); // Array vacío
-      } else {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load miners';
-        setError(errorMessage);
-        console.error('Error loading miners:', err);
-      }
+      logger.error('Error cargando mineros', err);
+      const errorMsg = err instanceof Error ? err.message : 'Error al cargar mineros';
+      setError(errorMsg);
+      setMiners([]);
     } finally {
       setIsLoadingMiners(false);
     }
-  };
+  }, [address, nftFacade, axiesOnly]);
 
-  // Recargar todos los NFTs
-  const reload = async () => {
-    await Promise.all([loadAxies(), loadMiners()]);
-  };
-
-  // Auto-cargar al conectar wallet
-  useEffect(() => {
-    if (isConnected && autoLoad) {
-      loadAxies();
-      if (minerContractAddress) {
-        loadMiners();
-      }
+  /**
+   * Carga todos los Axies del usuario
+   */
+  const loadAxies = useCallback(async () => {
+    if (!address || minersOnly) {
+      setAxies([]);
+      return;
     }
-  }, [isConnected, address, autoLoad, minerContractAddress]);
 
-  // Calcular estadísticas
-  const stats = {
-    totalAxies: axies.length,
-    totalMiners: miners.length,
-    stakedAxies: axies.filter(a => a.isStaked).length,
-    availableAxies: axies.filter(a => !a.isStaked).length,
-    totalResonancePower: axies.filter(a => a.isStaked).length * 5,
-    totalMiningPower: miners.reduce((sum, m) => sum + Number(m.miningPower), 0),
-    voraciousMiners: miners.filter(m => m.isVoracious).length,
-  };
-
-  return {
-    // Data
-    axies,
-    miners,
-    stats,
-
-    // Loading states
-    isLoadingAxies,
-    isLoadingMiners,
-    isLoading: isLoadingAxies || isLoadingMiners,
-
-    // Error
-    error,
-
-    // Actions
-    loadAxies,
-    loadMiners,
-    reload,
-  };
-}
-
-/**
- * Hook específico para Axies
- */
-export function useAxies(stakingContractAddress?: string) {
-  const { address, isConnected, chain } = useAccount();
-  const publicClient = usePublicClient();
-
-  const [axies, setAxies] = useState<AxieNFT[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadAxies = async () => {
-    if (!address || !publicClient || !chain) return;
-
-    setIsLoading(true);
+    logger.info('Cargando Axies', { address });
+    setIsLoadingAxies(true);
     setError(null);
 
     try {
-      // Crear provider de ethers desde el RPC de la chain
-      const provider = new ethers.JsonRpcProvider(chain.rpcUrls.default.http[0]);
-      const axieService = createAxieService(provider);
-      const loadedAxies = await axieService.getAxiesFromWallet(address);
+      const loadedAxies = await nftFacade.getAxiesFromWallet(address);
       setAxies(loadedAxies);
+      logger.info('Axies cargados exitosamente', { count: loadedAxies.length });
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '';
-      if (errorMsg.includes('could not decode result data')) {
-        console.warn('⚠️ Contrato Axie no desplegado o no disponible en esta red.');
-        setAxies([]);
-      } else {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load Axies';
-        setError(errorMessage);
-      }
+      logger.warn('No se pudieron cargar Axies (contrato no disponible)', { error: err });
+      // No establecer error para Axies ya que es opcional
+      setAxies([]);
     } finally {
-      setIsLoading(false);
+      setIsLoadingAxies(false);
     }
-  };
+  }, [address, nftFacade, minersOnly]);
 
+  /**
+   * Recarga todos los NFTs
+   */
+  const reload = useCallback(async () => {
+    await Promise.all([
+      !axiesOnly && loadMiners(),
+      !minersOnly && loadAxies(),
+    ]);
+  }, [loadMiners, loadAxies, minersOnly, axiesOnly]);
+
+  // Auto-load al montar si está habilitado
   useEffect(() => {
-    if (isConnected) {
-      loadAxies();
+    if (autoLoad && address) {
+      reload();
     }
-  }, [isConnected, address]);
+  }, [autoLoad, address]); // No incluir reload para evitar loops
 
-  return {
-    axies,
-    isLoading,
-    error,
-    reload: loadAxies,
-    totalAxies: axies.length,
-    stakedAxies: axies.filter(a => a.isStaked).length,
-    availableAxies: axies.filter(a => !a.isStaked).length,
-  };
-}
-
-/**
- * Hook específico para Mineros
- */
-export function useMiners(minerContractAddress: string) {
-  const { address, isConnected, chain } = useAccount();
-  const publicClient = usePublicClient();
-
-  const [miners, setMiners] = useState<CoreMinerNFT[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadMiners = async () => {
-    if (!address || !publicClient || !chain) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Crear provider de ethers desde el RPC de la chain
-      const provider = new ethers.JsonRpcProvider(chain.rpcUrls.default.http[0]);
-      const minerService = createMinerService(minerContractAddress, provider);
-      const loadedMiners = await minerService.getMinersFromWallet(address);
-      setMiners(loadedMiners);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '';
-      if (errorMsg.includes('could not decode result data')) {
-        console.warn('⚠️ Contrato CoreMiner no desplegado o no disponible en esta red.');
-        setMiners([]);
-      } else {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load miners';
-        setError(errorMessage);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isConnected) {
-      loadMiners();
-    }
-  }, [isConnected, address]);
-
-  // Filtros útiles
-  const minersByType = (type: number) => miners.filter(m => m.minerType === type);
-  const voraciousMiners = miners.filter(m => m.isVoracious);
-  const totalMiningPower = miners.reduce((sum, m) => sum + Number(m.miningPower), 0);
+  // Calcular isLoading general
+  const isLoading = isLoadingMiners || isLoadingAxies;
 
   return {
     miners,
+    axies,
     isLoading,
+    isLoadingMiners,
+    isLoadingAxies,
     error,
-    reload: loadMiners,
-    totalMiners: miners.length,
-    minersByType,
-    voraciousMiners,
-    totalMiningPower,
+    reload,
+    reloadMiners: loadMiners,
+    reloadAxies: loadAxies,
   };
 }

@@ -1,6 +1,6 @@
 // User-related types
 
-import type { Address } from './index';
+import type { Address } from 'viem';
 import type { CoreMiner, Geode, StakedAxie, BurnTicket } from './game';
 
 export interface UserProfile {
@@ -28,7 +28,7 @@ export interface UserBalances {
 }
 
 export interface UserStats {
-  totalGeodesFo rged: number;
+  totalGeodesForged: number;
   totalMinersHatched: number;
   totalMiningPower: bigint;
   totalResonancePower: number;

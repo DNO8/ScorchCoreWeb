@@ -1,231 +1,211 @@
 /**
- * Hook para gestionar el sistema de mining con CoreMiners
- * Proporciona funciones para iniciar, detener y reclamar recompensas
+ * Hook para operaciones de minería
+ * 
+ * Maneja el ciclo completo de minería de Core Miners:
+ * - Iniciar minería
+ * - Detener minería
+ * - Reclamar recompensas
+ * - Consultar estado de minería
+ * 
+ * @category Mining
+ * @example
+ * ```tsx
+ * function MiningPanel() {
+ *   const { startMining, stopMining, claimRewards, isLoading } = useMining();
+ *   
+ *   const handleStartMining = async (minerId: bigint) => {
+ *     const result = await startMining(minerId);
+ *     if (result.success) {
+ *       console.log('Minería iniciada!');
+ *     }
+ *   };
+ * }
+ * ```
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useWalletClient } from 'wagmi';
-import { ethers } from 'ethers';
-import { createMiningService, type MiningSession } from '@/services/blockchain/miningService';
-import { useContracts } from './useContracts';
+import { useState, useCallback } from 'react';
+import { useAccount } from 'wagmi';
+import { useContractManager } from './useContractManager';
+import { createServiceLogger } from '@/lib/utils/logger';
 
-interface UseMiningOptions {
-  minerId?: bigint;
-  autoRefresh?: boolean;
-  refreshInterval?: number; // en ms
+const logger = createServiceLogger('useMining');
+
+/**
+ * Resultado de una operación de minería
+ */
+export interface MiningOperationResult {
+  success: boolean;
+  transactionHash?: string;
+  error?: string;
 }
 
-export function useMining(options: UseMiningOptions = {}) {
-  const { minerId, autoRefresh = false, refreshInterval = 30000 } = options;
-  const { address, isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient();
-  const contracts = useContracts();
+/**
+ * Resultado de reclamar recompensas
+ */
+export interface ClaimRewardsResult extends MiningOperationResult {
+  amount?: bigint;
+}
 
-  const [session, setSession] = useState<MiningSession | null>(null);
-  const [fCoreBalance, setFCoreBalance] = useState<bigint>(0n);
-  const [baseRewardRate, setBaseRewardRate] = useState<bigint>(0n);
+/**
+ * Valor de retorno del hook useMining
+ */
+export interface UseMiningReturn {
+  /** Indica si está ejecutando una operación */
+  isLoading: boolean;
+  
+  /** Mensaje de error */
+  error: string | null;
+  
+  /** Inicia minería para un minero */
+  startMining: (minerId: bigint) => Promise<MiningOperationResult>;
+  
+  /** Detiene minería para un minero */
+  stopMining: (minerId: bigint) => Promise<MiningOperationResult>;
+  
+  /** Reclama recompensas de un minero */
+  claimRewards: (minerId: bigint) => Promise<ClaimRewardsResult>;
+}
+
+/**
+ * Hook para operaciones de minería
+ */
+export function useMining(): UseMiningReturn {
+  const { address } = useAccount();
+  const { contractManager } = useContractManager();
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Carga la información de una sesión de mining
+   * Inicia minería para un minero
    */
-  const loadMiningSession = useCallback(async () => {
-    if (!minerId || !contracts || !walletClient || !address) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Crear provider desde walletClient
-      const provider = new ethers.BrowserProvider(walletClient as any);
-      const signer = await provider.getSigner();
-
-      // Crear servicio
-      const miningService = createMiningService(
-        contracts.miningScheduler!,
-        contracts.fCoreToken,
-        signer
-      );
-
-      // Cargar sesión
-      const sessionData = await miningService.getMiningSession(minerId);
-      setSession(sessionData);
-
-      // Cargar balance de fCORE
-      const balance = await miningService.getFCoreBalance(address);
-      setFCoreBalance(balance);
-
-      // Cargar tasa base
-      const rate = await miningService.getBaseRewardPerHour();
-      setBaseRewardRate(rate);
-
-    } catch (err) {
-      console.error('Error loading mining session:', err);
-      setError((err as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [minerId, contracts, walletClient, address]);
-
-  /**
-   * Inicia mining con un CoreMiner
-   */
-  const startMining = useCallback(async (
-    minerIdToStart: bigint,
-    power: bigint,
-    efficiency: bigint
-  ) => {
-    if (!contracts || !walletClient) {
-      throw new Error('Wallet not connected');
+  const startMining = useCallback(async (minerId: bigint): Promise<MiningOperationResult> => {
+    if (!address) {
+      const error = 'Wallet no conectada';
+      logger.error(error);
+      return { success: false, error };
     }
 
+    logger.info('Iniciando minería', { minerId: minerId.toString() });
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setIsLoading(true);
-      setError(null);
+      const miningPool = contractManager.getMiningPool();
+      const result = await miningPool.startMining(minerId);
 
-      const provider = new ethers.BrowserProvider(walletClient as any);
-      const signer = await provider.getSigner();
-
-      const miningService = createMiningService(
-        contracts.miningScheduler!,
-        contracts.fCoreToken,
-        signer
-      );
-
-      const tx = await miningService.startMining(minerIdToStart, power, efficiency);
-      await tx.wait();
-
-      // Recargar sesión si es el miner actual
-      if (minerIdToStart === minerId) {
-        await loadMiningSession();
+      if (!result.success) {
+        throw new Error('La transacción falló');
       }
 
-      return tx;
+      logger.info('Minería iniciada exitosamente', { 
+        minerId: minerId.toString(),
+        hash: result.hash 
+      });
+
+      return {
+        success: true,
+        transactionHash: result.hash,
+      };
     } catch (err) {
-      setError((err as Error).message);
-      throw err;
+      logger.error('Error iniciando minería', err);
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
     } finally {
       setIsLoading(false);
     }
-  }, [contracts, walletClient, minerId, loadMiningSession]);
+  }, [address, contractManager]);
 
   /**
-   * Reclama recompensas de mining
+   * Detiene minería para un minero
    */
-  const claimRewards = useCallback(async (minerIdToClaim: bigint) => {
-    if (!contracts || !walletClient) {
-      throw new Error('Wallet not connected');
+  const stopMining = useCallback(async (minerId: bigint): Promise<MiningOperationResult> => {
+    if (!address) {
+      const error = 'Wallet no conectada';
+      logger.error(error);
+      return { success: false, error };
     }
+
+    logger.info('Deteniendo minería', { minerId: minerId.toString() });
+    setIsLoading(true);
+    setError(null);
 
     try {
-      setIsLoading(true);
-      setError(null);
+      const miningPool = contractManager.getMiningPool();
+      const result = await miningPool.stopMining(minerId);
 
-      const provider = new ethers.BrowserProvider(walletClient as any);
-      const signer = await provider.getSigner();
-
-      const miningService = createMiningService(
-        contracts.miningScheduler!,
-        contracts.fCoreToken,
-        signer
-      );
-
-      const result = await miningService.claimRewards(minerIdToClaim);
-      await result.tx.wait();
-
-      // Recargar sesión
-      if (minerIdToClaim === minerId) {
-        await loadMiningSession();
+      if (!result.success) {
+        throw new Error('La transacción falló');
       }
 
-      return result;
+      logger.info('Minería detenida exitosamente', { 
+        minerId: minerId.toString(),
+        hash: result.hash 
+      });
+
+      return {
+        success: true,
+        transactionHash: result.hash,
+      };
     } catch (err) {
-      setError((err as Error).message);
-      throw err;
+      logger.error('Error deteniendo minería', err);
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
     } finally {
       setIsLoading(false);
     }
-  }, [contracts, walletClient, minerId, loadMiningSession]);
+  }, [address, contractManager]);
 
   /**
-   * Detiene mining
+   * Reclama recompensas de un minero
    */
-  const stopMining = useCallback(async (minerIdToStop: bigint) => {
-    if (!contracts || !walletClient) {
-      throw new Error('Wallet not connected');
+  const claimRewards = useCallback(async (minerId: bigint): Promise<ClaimRewardsResult> => {
+    if (!address) {
+      const error = 'Wallet no conectada';
+      logger.error(error);
+      return { success: false, error };
     }
+
+    logger.info('Reclamando recompensas', { minerId: minerId.toString() });
+    setIsLoading(true);
+    setError(null);
 
     try {
-      setIsLoading(true);
-      setError(null);
+      const miningPool = contractManager.getMiningPool();
+      const result = await miningPool.claimRewards(minerId);
 
-      const provider = new ethers.BrowserProvider(walletClient as any);
-      const signer = await provider.getSigner();
-
-      const miningService = createMiningService(
-        contracts.miningScheduler!,
-        contracts.fCoreToken,
-        signer
-      );
-
-      const tx = await miningService.stopMining(minerIdToStop);
-      await tx.wait();
-
-      // Recargar sesión
-      if (minerIdToStop === minerId) {
-        await loadMiningSession();
+      if (!result.success) {
+        throw new Error('La transacción falló');
       }
 
-      return tx;
+      logger.info('Recompensas reclamadas exitosamente', { 
+        minerId: minerId.toString(),
+        amount: result.amount?.toString(),
+        hash: result.hash 
+      });
+
+      return {
+        success: true,
+        amount: result.amount,
+        transactionHash: result.hash,
+      };
     } catch (err) {
-      setError((err as Error).message);
-      throw err;
+      logger.error('Error reclamando recompensas', err);
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
     } finally {
       setIsLoading(false);
     }
-  }, [contracts, walletClient, minerId, loadMiningSession]);
-
-  /**
-   * Calcula recompensas estimadas por hora
-   */
-  const calculateEstimatedRewards = useCallback((power: bigint, efficiency: bigint): bigint => {
-    if (!baseRewardRate) return 0n;
-    return (baseRewardRate * power * efficiency) / 1000n;
-  }, [baseRewardRate]);
-
-  // Auto-refresh de la sesión
-  useEffect(() => {
-    if (autoRefresh && minerId) {
-      loadMiningSession();
-      const interval = setInterval(loadMiningSession, refreshInterval);
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh, minerId, refreshInterval, loadMiningSession]);
-
-  // Cargar al montar
-  useEffect(() => {
-    if (minerId && isConnected) {
-      loadMiningSession();
-    }
-  }, [minerId, isConnected, loadMiningSession]);
+  }, [address, contractManager]);
 
   return {
-    // Datos
-    session,
-    fCoreBalance,
-    baseRewardRate,
-    
-    // Estados
     isLoading,
     error,
-    isConnected,
-    
-    // Acciones
     startMining,
-    claimRewards,
     stopMining,
-    reload: loadMiningSession,
-    calculateEstimatedRewards,
+    claimRewards,
   };
 }

@@ -1,83 +1,144 @@
 /**
- * Hook central para obtener todos los datos del usuario
- * Combina NFTs, mining stats y otras estadísticas
+ * Hook para gestionar datos agregados del usuario
+ * 
+ * Combina información de NFTs y estadísticas de mining para proporcionar
+ * una vista consolidada de los assets y actividad del usuario.
+ * 
+ * @category Core
+ * @example
+ * ```tsx
+ * function Dashboard() {
+ *   const { axies, miners, stats, isLoading } = useUserData();
+ *   
+ *   if (isLoading) return <Loading />;
+ *   
+ *   return (
+ *     <div>
+ *       <p>Axies: {stats.axiesOwned}</p>
+ *       <p>Miners: {stats.coreMinersActive}</p>
+ *       <p>CORE Mined: {stats.totalCOREMined}</p>
+ *     </div>
+ *   );
+ * }
+ * ```
  */
 
-import { useAccount } from 'wagmi';
+import { useMemo } from 'react';
 import { useNFTs } from './useNFTs';
 import { useMiningStats } from './useMiningStats';
-import { useContracts } from './useContracts';
+import type { CoreMinerNFT, AxieNFT } from '@/lib/facades/NFTFacade';
 
+/**
+ * Estadísticas agregadas del usuario
+ */
 export interface UserStats {
-  // NFTs
+  /** Número total de Axies */
+  totalAxies: number;
+  
+  /** Número total de Core Miners */
+  totalMiners: number;
+  
+  /** Valor total estimado (placeholder) */
+  totalValue: string;
+  
+  /** Número de Axies en posesión */
   axiesOwned: number;
+  
+  /** Número de Core Miners activos */
   coreMinersActive: number;
-  stakedAxies: number;
   
-  // Mining
+  /** Total de CORE minado */
   totalCOREMined: string;
-  dailyRate: string;
-  activeMiningCycles: number;
-  pendingRewards: string;
   
-  // Loading states
-  isLoading: boolean;
-  error: string | null;
+  /** Tasa de minado diaria */
+  dailyRate: string;
 }
 
-export function useUserData() {
-  const { address, isConnected } = useAccount();
-  const contracts = useContracts();
+/**
+ * Valor de retorno del hook useUserData
+ */
+export interface UseUserDataReturn {
+  /** Lista de Axies NFT del usuario */
+  axies: AxieNFT[];
   
-  // Obtener NFTs del usuario
+  /** Lista de Core Miners NFT del usuario */
+  miners: CoreMinerNFT[];
+  
+  /** Estadísticas agregadas */
+  stats: UserStats;
+  
+  /** Indica si está cargando datos */
+  isLoading: boolean;
+  
+  /** Mensaje de error si ocurrió alguno */
+  error: string | null;
+  
+  /** Función para recargar todos los datos */
+  reload: () => Promise<void>;
+}
+
+/**
+ * Hook que proporciona datos agregados del usuario
+ * 
+ * Combina NFTs y estadísticas de mining en una sola interfaz
+ */
+export function useUserData(): UseUserDataReturn {
+  // Cargar NFTs
   const {
-    axies,
     miners,
-    stats: nftStats,
+    axies,
     isLoading: isLoadingNFTs,
     error: nftError,
     reload: reloadNFTs,
   } = useNFTs({
     autoLoad: true,
-    minerContractAddress: contracts?.coreMinerNFT,
   });
-  
-  // Obtener estadísticas de minería
-  const miningStats = useMiningStats();
-  
-  // Combinar estadísticas
-  const userStats: UserStats = {
-    // NFTs
-    axiesOwned: nftStats.totalAxies,
-    coreMinersActive: nftStats.totalMiners,
-    stakedAxies: nftStats.stakedAxies,
+
+  // Calcular estadísticas agregadas
+  const stats = useMemo<UserStats>(() => {
+    const totalMiners = miners.length;
+    const totalAxies = axies.length;
     
-    // Mining
-    totalCOREMined: miningStats.totalCOREMined,
-    dailyRate: miningStats.dailyRate,
-    activeMiningCycles: miningStats.activeMiningCycles,
-    pendingRewards: miningStats.pendingRewards,
+    // Contar miners activos (asumiendo que tienen mining session)
+    const activeMiners = miners.filter(m => m.isMining).length;
     
-    // Loading
-    isLoading: isLoadingNFTs || miningStats.isLoading,
-    error: nftError || miningStats.error,
+    // Calcular recompensas totales de todos los miners
+    const totalMined = miners.reduce((sum, m) => {
+      return sum + (m.totalMined ? Number(m.totalMined) : 0);
+    }, 0);
+    
+    // Calcular tasa diaria basada en miners activos
+    // Fórmula: suma de (miningPower/1000 * emissionRate * 24h) para cada miner activo
+    const hourlyEmission = 100; // 100 CORE/hora en año 1
+    const dailyRate = miners
+      .filter(m => m.isMining)
+      .reduce((sum, m) => {
+        const basePower = m.miningPower || 0;
+        return sum + ((basePower / 1000) * hourlyEmission * 24);
+      }, 0);
+    
+    return {
+      totalAxies,
+      totalMiners,
+      totalValue: '0', // Valor en USD - requiere oracle de precios externo
+      axiesOwned: totalAxies,
+      coreMinersActive: activeMiners,
+      totalCOREMined: totalMined.toFixed(2),
+      dailyRate: dailyRate.toFixed(2),
+    };
+  }, [miners, axies]);
+
+  // Función para recargar todos los datos
+  const reload = async (): Promise<void> => {
+    await reloadNFTs();
   };
-  
+
   return {
-    // Datos raw
     axies,
     miners,
-    
-    // Estadísticas combinadas
-    stats: userStats,
-    
-    // Estados
-    isLoading: userStats.isLoading,
-    error: userStats.error,
-    isConnected,
-    address,
-    
-    // Acciones
-    reload: reloadNFTs,
+    stats,
+    isLoading: isLoadingNFTs,
+    error: nftError,
+    reload,
   };
 }

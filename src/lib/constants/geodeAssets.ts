@@ -49,13 +49,17 @@ export const GEODE_ASSETS = {
   },
 } as const;
 
-export type GeodeType = keyof typeof GEODE_ASSETS;
+/**
+ * NOTA: GeodeType enum se exporta desde @/lib/constants/forge
+ * Este archivo solo maneja assets visuales.
+ */
+type GeodeAssetKey = keyof typeof GEODE_ASSETS;
 
 /**
  * Obtiene el asset de una geoda por tipo
  */
 export function getGeodeAsset(geodeType: number) {
-  return GEODE_ASSETS[geodeType as GeodeType] || GEODE_ASSETS[0];
+  return GEODE_ASSETS[geodeType as GeodeAssetKey] || GEODE_ASSETS[0];
 }
 
 /**

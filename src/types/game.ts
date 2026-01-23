@@ -1,54 +1,65 @@
 // Game-related types
 
-export enum GeodeStage {
-  PETIT = 'PETIT',
-  ALTO = 'ALTO',
-  ANIMAL = 'ANIMAL',
-  ULTRAMECH = 'ULTRAMECH',
-  TANQUE = 'TANQUE',
-}
+// Refactorizado de enum a const object para mejor compatibilidad TypeScript
+export const GeodeStage = {
+  PETIT: 'PETIT',
+  ALTO: 'ALTO',
+  ANIMAL: 'ANIMAL',
+  ULTRAMECH: 'ULTRAMECH',
+  TANQUE: 'TANQUE',
+} as const;
 
-export enum AxieType {
-  BEAST = 'BEAST',      // Bestia
-  AQUATIC = 'AQUATIC',  // Aqua
-  BIRD = 'BIRD',        // Ave
-  REPTILE = 'REPTILE',  // Reptil
-  BUG = 'BUG',          // Bicho
-  PLANT = 'PLANT',      // Planta
-  MECH = 'MECH',        // Mech
-  DUSK = 'DUSK',        // Dusk (Oscuridad)
-  DAWN = 'DAWN',        // Dawn (Amanecer)
-}
+export type GeodeStage = typeof GeodeStage[keyof typeof GeodeStage];
 
-export enum Rarity {
-  COMMON = 'COMMON',           // Común
-  UNCOMMON = 'UNCOMMON',       // Poco Común
-  RARE = 'RARE',               // Raro
-  VERY_RARE = 'VERY_RARE',     // Ultra Raro
-  EPIC = 'EPIC',               // Épico
-  LEGENDARY = 'LEGENDARY',     // Legendario
-}
+export const AxieType = {
+  BEAST: 'BEAST',      // Bestia
+  AQUATIC: 'AQUATIC',  // Aqua
+  BIRD: 'BIRD',        // Ave
+  REPTILE: 'REPTILE',  // Reptil
+  BUG: 'BUG',          // Bicho
+  PLANT: 'PLANT',      // Planta
+  MECH: 'MECH',        // Mech
+  DUSK: 'DUSK',        // Dusk (Oscuridad)
+  DAWN: 'DAWN',        // Dawn (Amanecer)
+} as const;
 
-export enum MinerType {
-  BEAST = 0,
-  AQUATIC = 1,
-  BIRD = 2,
-  REPTILE = 3,
-  BUG = 4,
-  PLANT = 5,
-  MECH = 6,
-  ULTRAMECH = 7,
-  DUSK = 8,
-  DAWN = 9,
-  TANQUE = 10,
-}
+export type AxieType = typeof AxieType[keyof typeof AxieType];
 
-export enum TicketLevel {
-  BRONZE = 0,
-  SILVER = 1,
-  GOLD = 2,
-  PLATINUM = 3,
-}
+export const Rarity = {
+  COMMON: 'COMMON',           // Común
+  UNCOMMON: 'UNCOMMON',       // Poco Común
+  RARE: 'RARE',               // Raro
+  VERY_RARE: 'VERY_RARE',     // Ultra Raro
+  EPIC: 'EPIC',               // Épico
+  LEGENDARY: 'LEGENDARY',     // Legendario
+} as const;
+
+export type Rarity = typeof Rarity[keyof typeof Rarity];
+
+export const MinerType = {
+  BEAST: 0,
+  AQUATIC: 1,
+  BIRD: 2,
+  REPTILE: 3,
+  BUG: 4,
+  PLANT: 5,
+  MECH: 6,
+  ULTRAMECH: 7,
+  DUSK: 8,
+  DAWN: 9,
+  TANQUE: 10,
+} as const;
+
+export type MinerType = typeof MinerType[keyof typeof MinerType];
+
+export const TicketLevel = {
+  BRONZE: 0,
+  SILVER: 1,
+  GOLD: 2,
+  PLATINUM: 3,
+} as const;
+
+export type TicketLevel = typeof TicketLevel[keyof typeof TicketLevel];
 
 export interface Geode {
   id: string;

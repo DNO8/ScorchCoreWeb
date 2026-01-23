@@ -39,3 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# MD
+ANALISIS_COHERENCIA_PROYECTO.md

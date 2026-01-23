@@ -51,7 +51,7 @@ export const CATEGORY_INFO = {
     color: '#94a3b8', // slate-400
     icon: '/images/typesGeodes/petit.png',
     defaultCost: {
-      axs: '0.1', // 0.1 AXS = 1 Axie NFT (testnet)
+      axs: '1', // 1 AXS = 1 Axie NFT (testnet)
       slp: '350', // 350 SLP según Manual de Forja
       memento: '5', // 5 mementos (para testear mecánica)
     },
@@ -69,7 +69,7 @@ export const CATEGORY_INFO = {
     color: '#22c55e', // green-500
     icon: '/images/typesGeodes/Alto.png',
     defaultCost: {
-      axs: '0.2', // 0.2 AXS = 2 Axies NFT (testnet)
+      axs: '2', // 2 AXS = 2 Axies NFT (testnet)
       slp: '500', // 500 SLP según Manual de Forja
       memento: '10', // 10 mementos
     },
@@ -87,7 +87,7 @@ export const CATEGORY_INFO = {
     color: '#3b82f6', // blue-500
     icon: '/images/typesGeodes/Animal.png',
     defaultCost: {
-      axs: '0.2', // 0.2 AXS = 2 Axies NFT (testnet)
+      axs: '2', // 2 AXS = 2 Axies NFT (testnet)
       slp: '500', // 500 SLP según Manual de Forja
       memento: '15', // 15 mementos
     },
@@ -105,7 +105,7 @@ export const CATEGORY_INFO = {
     color: '#a855f7', // purple-500
     icon: '/images/typesGeodes/ULTRA_Mecánico.png',
     defaultCost: {
-      axs: '0.2', // 0.2 AXS = 2 Axies NFT (testnet)
+      axs: '2', // 2 AXS = 2 Axies NFT (testnet)
       slp: '500', // 500 SLP según Manual de Forja
       memento: '20', // 20 mementos
     },
@@ -123,7 +123,7 @@ export const CATEGORY_INFO = {
     color: '#f59e0b', // amber-500
     icon: '/images/typesGeodes/Tanque.png',
     defaultCost: {
-      axs: '0.3', // 0.3 AXS = 2 Axies + 1 Planta (testnet)
+      axs: '3', // 3 AXS = 3 Axies (2 + 1 Planta) (testnet)
       slp: '500', // 500 SLP según Manual de Forja
       memento: '30', // 30 mementos
     },
@@ -194,7 +194,7 @@ export const AXIE_CLASS_INFO = {
     name: 'Dawn',
     displayName: 'Dawn',
     icon: '/images/mementos/memento-dawn.webp',
-    color: '#f97316', // orange-500
+    color: '#eab308', // yellow-500
   },
 } as const;
 

@@ -3,7 +3,10 @@
  * Soporta Ronin Mainnet y Ronin Testnet
  */
 
-import type { Address } from '@/types';
+import type { Address } from 'viem';
+import { createServiceLogger } from '@/lib/utils/logger';
+
+const log = createServiceLogger('ContractConfig');
 
 export interface ContractAddresses {
   // Tokens
@@ -76,38 +79,41 @@ const MAINNET_CONTRACTS: ContractAddresses = {
 };
 
 // Ronin Testnet Addresses (2021)
-// Deployed on Nov 10, 2025 - UPDATED Nov 16, 2025
-const TESTNET_CONTRACTS: ContractAddresses = {
-  // Mock Tokens (from deployment-testnet.json)
-  // Tokens (REDESPLIEGUE COMPLETO Nov 17, 2025)
-  axsToken: '0x2f06F03bcbE94c7970b97D8Ddd5793a7beDE26b3', // MockAXS ✅ 
-  slpToken: '0x1cd1459a4A4400F35313d7C0f41e3d80FF21Fc67', // MockSLP ✅ 
-  coreToken: '0x236E0F5652e8f8863C1CB1E599bB309020a76539', // MockCORE
-  fCoreToken: '0x66871e6949493f02b81047693430ac2Fda3bcC98', // fCORE (recompensas de mining) 
+// DEPLOYED: 15-ene-2026 04:14 UTC - VERIFIED on Sourcify ✅
+export const TESTNET_CONTRACTS: ContractAddresses = {
+  // External Tokens (Ronin Testnet)
+  // ⚠️ IMPORTANTE: AXS es solo para PRUEBAS en testnet. Para producción usar el contrato oficial de AXS
+  axsToken: '0x59e8ab9c8f7264456c05f3819af441b4e3ed4244', // AXS Token (testnet - TEMPORAL para pruebas)
+  slpToken: '0xa8754b9Fa15fc18BB59458815510E40a12cD2014', // SLP Contract (external)
   
-  // Memento Tokens (REDESPLIEGUE Nov 17, 2025 - 9 mementos específicos por clase)
+  // Core Tokens (NUEVO DEPLOYMENT)
+  coreToken: '0x725d916F4f9212057A63E3BE1B4790BCe8720bf5', // CoreToken ✅ VERIFIED
+  fCoreToken: '0xF525F3C43888da15d18cbE4006e0c173FC84f363', // fCoreToken ✅ VERIFIED
+  
+  // Memento Token (ERC-1155 Multi-Type - Token IDs 0-8)
+  // ✅ NUEVO: Soporta 9 tipos diferentes por clase de Axie (0=Beast, 1=Aqua, 2=Bird, etc.)
   mementos: {
-    beast: '0x98d5466D0654495D718e14A80e219e4F43cA8f70',   // Beast Memento ✅ NUEVO
-    aqua: '0xc3A3dfD5d300Fd2A1ab3CfcEc0155F98C32d8fe9',    // Aqua Memento ✅ NUEVO
-    bird: '0x87f69AD483163c5669974b8e41aAf8Cc2afD549e',    // Bird Memento ✅ NUEVO
-    reptile: '0xd032c6046F2d69434Dd5b635ae8EaE9b0320eB49', // Reptile Memento ✅ NUEVO
-    bug: '0x123Aa341e74A0dA523c1B667aC07E51e39F2eC83',     // Bug Memento ✅ NUEVO
-    plant: '0xEDf19942589Dd7fb2637Ef5Ca21183ba0eeF6461',   // Plant Memento ✅ NUEVO
-    mech: '0x29802D4d2B58fE33c02289345Ab6502743F3454d',    // Mech Memento ✅ NUEVO
-    dusk: '0xD74b3E89Cd4145606CB6C0536DdF871667b2d165',    // Dusk Memento ✅ NUEVO
-    dawn: '0x4C7B285c325A9Bf136bb5a733e377B0903066910',    // Dawn Memento ✅ NUEVO
+    beast: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25',   // MementoToken v2 ✅ Multi-Type
+    aqua: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25',    // (mismo contrato, diferentes IDs)
+    bird: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25',
+    reptile: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25',
+    bug: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25',
+    plant: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25',
+    mech: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25',
+    dusk: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25',
+    dawn: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25',
   },
   
-  // NFTs (REDESPLIEGUE COMPLETO Nov 17, 2025)
-  axieNFT: '0xF2463FCB0211D5D4C224FBD67299d26B241Aae18', // MockAxieNFT
-  geodeNFT: '0x22A5587085f6717E2462Ef2eFF0DD0AcFa354FEc', // GeodeNFT ✅ NUEVO
-  coreMinerNFT: '0xC119c50166D7DC9866a1548E5B6c70A354c0c8D6', // CoreMinerNFTV2 ✅ ACTUALIZADO Nov 17
+  // NFTs (NUEVO DEPLOYMENT - verificados en Sourcify)
+  axieNFT: '0x32950db2a7164aE833121501C797D79E7B79d74C', // Axie Contract (external)
+  geodeNFT: '0x4581b630DC14905a2C13B21654610a547733A287', // GeodeNFT ✅ VERIFIED
+  coreMinerNFT: '0xa105F44F96A733C1eADEecDd9ade3f03Ce11B79b', // CoreMinerNFT ✅ VERIFIED
   
-  // Core Contracts (REDESPLIEGUE COMPLETO Nov 17, 2025)
-  scorchHeartTransmuter: '0x8a0F8989A4ce18066eA186df793E8ab0e65F8bc6', // TransmuterV2 ✅ ACTUALIZADO Nov 17
-  axsTreasuryVault: '0x910c0409ae9AafDb3B0f681D2f8A5C4Ce71505c3', // AXSTreasuryVault ✅ NUEVO
-  miningScheduler: '0x4E9fAd24C85b73164D74FAe1204A4ec10046BA35', // MiningScheduler ✅ FIXED Nov 17 - Apuntando al CoreMinerNFT correcto
-  axieStakingManager: '0xbB45Eca5C79FBed11384c0Ae5792F032cE4d9741', // AxieStakingManager
+  // Core Contracts (NUEVO DEPLOYMENT - Phase 2A completo)
+  scorchHeartTransmuter: '0x2974bb1607DDBEc7eC7013562e0D0F45FE6732B1', // ForgeFactory ✅ VERIFIED
+  axsTreasuryVault: '0x0000000000000000000000000000000000000000', // TODO: No deployed yet
+  miningScheduler: '0x6FAD12Be7CbaB1F559B39A84019a29239B17863E', // MiningPool ✅ VERIFIED
+  axieStakingManager: '0x0f00cce40b8aA690926daCDbDA5663b2bd39c2FB', // AxieStakingManager ✅ VERIFIED
 };
 
 /**
@@ -121,7 +127,11 @@ export function getContractAddresses(chainId: number): ContractAddresses {
     case 2021:
       return TESTNET_CONTRACTS;
     default:
-      console.warn(`Unknown chainId: ${chainId}, defaulting to testnet`);
+      log.warn('Unknown chainId detected, defaulting to testnet', { 
+        chainId,
+        supportedChains: [2020, 2021],
+        defaulting: 'testnet'
+      });
       return TESTNET_CONTRACTS;
   }
 }
@@ -138,7 +148,7 @@ export function isValidAddress(address: Address): boolean {
  */
 export function getValidContracts(chainId: number): Partial<ContractAddresses> {
   const addresses = getContractAddresses(chainId);
-  const validAddresses: any = {};
+  const validAddresses: Partial<ContractAddresses> = {};
   
   for (const [key, value] of Object.entries(addresses)) {
     // mementos es un objeto, manejarlo especialmente

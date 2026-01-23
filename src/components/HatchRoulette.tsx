@@ -4,12 +4,16 @@ import { useState, useEffect, useRef } from 'react';
 import { GeodeCategory, AxieClass } from '@/lib/constants/geodes';
 import { gsap } from 'gsap';
 import { thumbnailNames } from './thumbnailMappings';
+import type { HatchResult } from './types/HatchTypes';
+import { createServiceLogger } from '@/lib/utils/logger';
+
+const logger = createServiceLogger('HatchRoulette');
 
 interface HatchRouletteProps {
   category: GeodeCategory;
   axieClass: AxieClass;
   isVisible: boolean;
-  onComplete: (result: any) => void;
+  onComplete: (result: HatchResult) => void;
   loopUntilConfirm?: boolean;
   isConfirmed?: boolean;
 }
@@ -39,19 +43,26 @@ const getThumbnails = (category: GeodeCategory, axieClass: AxieClass): string[] 
   const categoryFolder = categoryMap[category];
   // Para ULTRAMECH, las subcarpetas usan "ULTRA" en lugar de "ULTRAMECH"
   const subfolder = category === GeodeCategory.ULTRAMECH ? 'ULTRA' : categoryFolder;
-  const classFolder = `${subfolder} ${classMap[axieClass]}`;
+  
+  // Para PETIT-BEAST y PETIT-DAWN, las carpetas usan guión en lugar de espacio
+  const className = classMap[axieClass];
+  let classFolder = `${subfolder} ${className}`;
+  if (category === GeodeCategory.PETIT && (axieClass === AxieClass.BEAST || axieClass === AxieClass.DAWN)) {
+    classFolder = `${subfolder}-${className}`;
+  }
+  
   const basePath = `/images/miners-thumbnails/${categoryFolder}/${classFolder}`;
 
   // Usar el mapping importado desde thumbnailMappings.ts
   // El mapping contiene todos los thumbnails para PETIT, ALTO, ANIMAL, ULTRAMECH y TANK
   // Para ULTRAMECH, las claves en el mapping usan "ULTRA" no "ULTRAMECH"
-  const key = `${subfolder}_${classMap[axieClass]}`;
+  const key = `${subfolder}_${className}`;
   
   // Si no hay thumbnails mapeados, retornar array vacío
   const files = thumbnailNames[key];
   
   if (!files) {
-    console.warn(`⚠️ No hay thumbnails mapeados para ${key}`);
+    logger.warn('No hay thumbnails mapeados', { key });
     return [];
   }
 
@@ -255,49 +266,47 @@ export function HatchRoulette({ category, axieClass, isVisible, onComplete, loop
   const thumbnails = getThumbnails(category, axieClass);
   const minerData = getMinerData(category, axieClass);
   
-  // Extraer nombres reales de los thumbnails (sin -thumbnail.webp)
+  // Extraer nombres reales de los thumbnails (sin -thumbnail.webp o .png)
   const realMinerNames = thumbnails.map(path => {
     const fileName = path.split('/').pop() || '';
-    // Quitar -thumbnail.webp o -thumbnaiL.webp (case insensitive) y reemplazar _ por espacios
+    // Quitar -thumbnail.webp, .png, .webp (case insensitive) y reemplazar _ por espacios
     return fileName
-      .replace(/-thumbnail\.webp$/i, '') // Case insensitive
+      .replace(/-thumbnail\.webp$/i, '') // Case insensitive -thumbnail.webp
+      .replace(/\.png$/i, '') // Quitar .png
+      .replace(/\.webp$/i, '') // Quitar .webp
       .replace(/_/g, ' ');
   });
 
-  // Cleanup y reset
   useEffect(() => {
-    console.log('🟢 [ROULETTE] Componente montado');
+    logger.debug('Componente montado');
     
-    // Resetear flag y selectedIndex cuando el componente se vuelve a mostrar
     if (isVisible) {
       hasAppliedRNG.current = false;
       setSelectedIndex(null);
     }
     
     return () => {
-      console.log('🔴 [ROULETTE] Componente desmontando, matando animación GSAP');
+      logger.debug('Componente desmontando - limpiando animación GSAP');
       if (animationRef.current) {
         animationRef.current.kill();
         animationRef.current = null;
       }
-      hasAppliedRNG.current = false; // Reset al desmontar
-      setSelectedIndex(null); // Reset selectedIndex
+      hasAppliedRNG.current = false;
+      setSelectedIndex(null);
     };
   }, [isVisible]);
 
-  // Placeholder infinito con GSAP
   useEffect(() => {
     if (!isVisible || !containerRef.current) {
-      console.log('⚠️ [ROULETTE] No visible o sin ref, no iniciando');
+      logger.debug('No visible o sin ref - omitiendo inicio de animación');
       return;
     }
     if (animationRef.current) {
-      console.log('⚠️ [ROULETTE] Animación ya existe, no duplicando');
+      logger.debug('Animación ya existe - evitando duplicación');
       return;
     }
 
-    console.log('🎲 [ROULETTE] Iniciando placeholder infinito con GSAP');
-    console.log('🎲 [ROULETTE] Thumbnails count:', thumbnails.length);
+    logger.info('Iniciando animación placeholder infinita', { thumbnailCount: thumbnails.length });
     
     // Animar continuamente hacia la izquierda
     // Con 7 thumbnails de 208px cada uno = 1456px por ciclo completo
@@ -316,22 +325,21 @@ export function HatchRoulette({ category, axieClass, isVisible, onComplete, loop
         }
       },
       onRepeat: () => {
-        console.log('� [ROULETTE] Ciclo completado, continuando...');
+        logger.debug('Ciclo de animación completado');
       }
     });
     
-    console.log('✅ [ROULETTE] Animación GSAP creada');
+    logger.debug('Animación GSAP creada exitosamente');
 
   }, [isVisible, thumbnails.length]);
 
-  // Cuando se confirma: aplicar RNG y desacelerar
   useEffect(() => {
     if (!isConfirmed || !loopUntilConfirm) return;
     if (!animationRef.current || !containerRef.current) return;
-    if (hasAppliedRNG.current) return; // Evitar doble ejecución
+    if (hasAppliedRNG.current) return;
 
-    console.log('✅ [ROULETTE] Contrato confirmado, aplicando RNG');
-    hasAppliedRNG.current = true; // Marcar como ejecutado
+    logger.info('Contrato confirmado - aplicando RNG');
+    hasAppliedRNG.current = true;
     
     // Detener animación placeholder
     animationRef.current.kill();
@@ -352,7 +360,12 @@ export function HatchRoulette({ category, axieClass, isVisible, onComplete, loop
     
     const selectedMiner = minerData[selectedIndex];
     const realMinerName = realMinerNames[selectedIndex] || selectedMiner.name;
-    console.log('🎯 [ROULETTE] Minero seleccionado:', realMinerName, 'rareza:', selectedMiner.rarity);
+    logger.info('Minero seleccionado por RNG', {
+      name: realMinerName,
+      rarity: selectedMiner.rarity,
+      power: selectedMiner.power,
+      index: selectedIndex
+    });
 
     // Calcular posición final centrada
     const thumbnailWidth = 192; // w-48
@@ -380,12 +393,10 @@ export function HatchRoulette({ category, axieClass, isVisible, onComplete, loop
     // Para centrar: mover el contenedor de forma que el centro del thumbnail esté en el centro del viewport
     const finalPosition = thumbnailCenterPosition - containerCenter;
     
-    console.log('🎯 [ROULETTE] Cálculo simplificado:', {
+    logger.debug('Cálculo de posición final', {
       selectedIndex,
       targetCycle,
       thumbnailAbsoluteIndex,
-      thumbnailCenterPosition,
-      containerCenter,
       finalPosition
     });
     
@@ -393,20 +404,24 @@ export function HatchRoulette({ category, axieClass, isVisible, onComplete, loop
     animationRef.current = gsap.to(containerRef.current, {
       x: -finalPosition,
       duration: 5, // 5 segundos total de desaceleración
-      ease: 'power4.out', // desaceleración fuerte al final
+      ease: 'power4.out',
       onComplete: () => {
-        console.log('✅ [ROULETTE] Animación completada');
-        // Resaltar el thumbnail seleccionado
+        logger.info('Animación de desaceleración completada');
         setSelectedIndex(selectedIndex);
         
         setTimeout(() => {
           onComplete({
-            id: selectedIndex,
-            name: realMinerName, // Usar nombre real del archivo
+            id: BigInt(selectedIndex),
+            minerId: BigInt(selectedIndex),
+            name: realMinerName,
             rarity: selectedMiner.rarity,
-            power: selectedMiner.power
+            power: selectedMiner.power,
+            efficiency: 100,
+            category,
+            axieClass,
+            videoPath: '',
           });
-        }, 1500); // Dar tiempo para ver el efecto
+        }, 1500);
       }
     });
 

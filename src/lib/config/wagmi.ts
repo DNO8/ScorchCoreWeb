@@ -1,71 +1,35 @@
-import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { defineChain } from 'viem';
+import { createConfig, http, type CreateConnectorFn } from 'wagmi';
+import { ronin, saigon } from 'viem/chains';
+import { roninWallet, waypoint } from '@sky-mavis/tanto-wagmi';
+import type { IWaypointProviderConfigs } from '@sky-mavis/tanto-connect';
 
-// Ronin Mainnet Chain
-export const ronin = defineChain({
-  id: 2020,
-  name: 'Ronin',
-  network: 'ronin',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'RON',
-    symbol: 'RON',
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://api.roninchain.com/rpc'],
-    },
-    public: {
-      http: ['https://api.roninchain.com/rpc'],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: 'Ronin Explorer',
-      url: 'https://app.roninchain.com',
-    },
-  },
-  contracts: {
-    // Add ScorchCore contracts here when deployed
-  },
-});
+// Waypoint configuration
+const waypointConfig: IWaypointProviderConfigs = {
+  clientId: process.env.NEXT_PUBLIC_WAYPOINT_CLIENT_ID || '',
+  chainId: saigon.id, // Default to testnet
+};
 
-// Ronin Saigon Testnet
-export const roninTestnet = defineChain({
-  id: 2021,
-  name: 'Ronin Testnet',
-  network: 'ronin-testnet',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'RON',
-    symbol: 'RON',
-  },
-  rpcUrls: {
-    default: {
-      http: [
-        'https://saigon-testnet.roninchain.com/rpc',
-        'https://api-gateway.skymavis.com/rpc/testnet',
-      ],
-    },
-    public: {
-      http: [
-        'https://saigon-testnet.roninchain.com/rpc',
-        'https://api-gateway.skymavis.com/rpc/testnet',
-      ],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: 'Saigon Explorer',
-      url: 'https://saigon-app.roninchain.com',
-    },
-  },
-  testnet: true,
-});
+// Type assertion needed due to wagmi v2.19+ type changes
+// tanto-wagmi connectors work at runtime but have outdated type definitions
+const roninWalletConnector = roninWallet() as unknown as CreateConnectorFn;
+const waypointConnector = waypoint(waypointConfig) as unknown as CreateConnectorFn;
 
-export const config = getDefaultConfig({
-  appName: 'ScorchCore Protocol',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
-  chains: [ronin, roninTestnet],
+// Create wagmi config with Ronin connectors
+// IMPORTANT: saigon (testnet) is first to be default when no wallet connected
+export const config = createConfig({
+  chains: [saigon, ronin], // Testnet first for development
+  transports: {
+    [ronin.id]: http('https://api.roninchain.com/rpc'),
+    [saigon.id]: http('https://saigon-testnet.roninchain.com/rpc'),
+  },
+  multiInjectedProviderDiscovery: false,
+  connectors: [roninWalletConnector, waypointConnector],
   ssr: true,
 });
+
+// Re-export chains for convenience
+export { ronin, saigon as roninTestnet };
+
+// Chain IDs
+export const RONIN_MAINNET_ID = ronin.id;
+export const RONIN_TESTNET_ID = saigon.id;

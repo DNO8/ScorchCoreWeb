@@ -1,14 +1,13 @@
 // ScorchCore TypeScript Types
 
-export * from './contracts';
 export * from './game';
 export * from './user';
 
-// Tipos básicos
-export type Address = `0x${string}`;
+// Re-export Address from viem para conveniencia
+export type { Address } from 'viem';
 
 export interface TokenBalance {
-  address: Address;
+  address: `0x${string}`;
   symbol: string;
   balance: bigint;
   decimals: number;

@@ -1,200 +1,267 @@
-import { useState, useEffect } from 'react';
-import { useWallet } from './useWallet';
-import { useAccount } from 'wagmi';
-import { AxieClass } from '../constants/geodes';
-import { getContractAddresses } from '../config/contracts';
-import { ethers } from 'ethers';
-
 /**
- * Hook para obtener balances de los 9 tipos de mementos
- * Lee los balances reales desde los contratos desplegados en Ronin Testnet
+ * Hook para gestionar balances de Mementos
+ * 
+ * Los Mementos son tokens ERC-1155 con diferentes IDs por clase de Axie.
+ * Este hook maneja la consulta de balances usando balanceOf(address, tokenId).
+ * 
+ * @category Balance
+ * @example
+ * ```tsx
+ * function MementoPanel() {
+ *   const { balances, isLoading, reload } = useMementoBalances();
+ *   
+ *   if (isLoading) return <Loading />;
+ *   
+ *   return (
+ *     <div>
+ *       {Object.entries(balances).map(([axieClass, data]) => (
+ *         <div key={axieClass}>
+ *           {data.symbol}: {data.formatted}
+ *         </div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
  */
 
+import { useState, useEffect, useCallback } from 'react';
+import { useAccount } from 'wagmi';
+import { useTokenService } from './useTokenService';
+import { getContractAddresses } from '@/lib/config/contracts';
+import { AXIE_CLASS_INFO, AxieClass } from '@/lib/constants/geodes';
+import { createServiceLogger } from '@/lib/utils/logger';
+import { ContractManager } from '@/lib/contracts/ContractManager';
+import type { Address } from 'viem';
+
+const logger = createServiceLogger('useMementoBalances');
+
+/**
+ * Balance de un Memento específico
+ */
 export interface MementoBalance {
   axieClass: AxieClass;
   balance: bigint;
+  formatted: string;
   symbol: string;
-  name: string;
-  address?: string;
+  address: Address;
 }
 
-export interface MementoBalances {
-  [key: number]: MementoBalance; // key es AxieClass
+/**
+ * Balances de todos los Mementos por clase de Axie
+ */
+export type MementoBalances = Record<AxieClass, MementoBalance>;
+
+/**
+ * Opciones de configuración
+ */
+export interface UseMementoBalancesOptions {
+  /**
+   * Si debe cargar automáticamente al montar
+   * @default true
+   */
+  autoLoad?: boolean;
+
+  /**
+   * Intervalo de recarga automática en ms (0 para deshabilitar)
+   * @default 30000 (30 segundos)
+   */
+  refreshInterval?: number;
 }
 
-// Datos mock de mementos
-const MOCK_MEMENTO_DATA = {
-  [AxieClass.BEAST]: { symbol: 'MBEAST', name: 'Beast Memento' },
-  [AxieClass.AQUA]: { symbol: 'MAQUA', name: 'Aqua Memento' },
-  [AxieClass.BIRD]: { symbol: 'MBIRD', name: 'Bird Memento' },
-  [AxieClass.REPTILE]: { symbol: 'MREPT', name: 'Reptile Memento' },
-  [AxieClass.BUG]: { symbol: 'MBUG', name: 'Bug Memento' },
-  [AxieClass.PLANT]: { symbol: 'MPLANT', name: 'Plant Memento' },
-  [AxieClass.MECH]: { symbol: 'MMECH', name: 'Mech Memento' },
-  [AxieClass.DUSK]: { symbol: 'MDUSK', name: 'Dusk Memento' },
-  [AxieClass.DAWN]: { symbol: 'MDAWN', name: 'Dawn Memento' },
-};
+/**
+ * Valor de retorno del hook
+ */
+export interface UseMementoBalancesReturn {
+  /** Balances de Mementos por clase de Axie */
+  balances: MementoBalances | null;
+  
+  /** Indica si está cargando */
+  isLoading: boolean;
+  
+  /** Mensaje de error */
+  error: string | null;
+  
+  /** Función para recargar balances */
+  reload: () => Promise<void>;
+}
 
-export function useMementoBalances() {
-  const { isConnected } = useWallet();
+/**
+ * Hook para gestionar balances de Mementos
+ */
+export function useMementoBalances(
+  options: UseMementoBalancesOptions = {}
+): UseMementoBalancesReturn {
+  const {
+    autoLoad = true,
+    refreshInterval = 30000,
+  } = options;
+
   const { address, chain } = useAccount();
-  const [balances, setBalances] = useState<MementoBalances>({});
+  const tokenService = useTokenService();
+  
+  const [balances, setBalances] = useState<MementoBalances | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isConnected || !address || !chain) {
-      setBalances({});
+  /**
+   * Carga los balances de todos los Mementos
+   */
+  const loadBalances = useCallback(async () => {
+    if (!address || !chain) {
+      setBalances(null);
       return;
     }
 
-    fetchBalances();
-  }, [isConnected, address, chain]);
-
-  const fetchBalances = async () => {
-    if (!address || !chain) return;
-
+    logger.info('Cargando balances de Mementos', { address });
     setIsLoading(true);
     setError(null);
 
     try {
-      // Obtener direcciones de contratos para la red actual
+      // Validar que hay provider disponible
+      const contractManager = ContractManager.getInstance({ chainId: chain.id });
+      const provider = contractManager.getProvider();
+      if (!provider) {
+        logger.warn('No provider available, skipping memento balances load');
+        setBalances(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Obtener direcciones de Mementos
       const contracts = getContractAddresses(chain.id);
       const mementoAddresses = contracts.mementos;
+
+      // Filtrar direcciones inválidas (0x0000...)
+      const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+      const validMementos = Object.entries(mementoAddresses).filter(
+        ([_, address]) => address.toLowerCase() !== ZERO_ADDRESS.toLowerCase()
+      );
+
+      if (validMementos.length === 0) {
+        logger.warn('No valid memento addresses configured for this network', { chainId: chain.id });
+        setBalances({} as MementoBalances);
+        setIsLoading(false);
+        return;
+      }
+
+      // ERC-1155: Todas las clases apuntan al mismo contrato, pero con diferentes tokenIds
+      // tokenId = axieClass (0=Beast, 1=Aqua, 2=Bird, etc.)
+      const mementoAddress = validMementos[0][1] as Address; // Todas usan la misma dirección
       
-      console.log('🔍 Cargando balances de mementos...');
-      console.log('  Address:', address);
-      console.log('  Chain:', chain.id);
-      
-      // Crear provider
-      const provider = new ethers.JsonRpcProvider(chain.rpcUrls.default.http[0]);
-      
-      // ABI básico de ERC20 para balanceOf
-      const ERC20_ABI = [
-        'function balanceOf(address owner) view returns (uint256)',
-      ];
-      
-      // Mapeo de clases de Axie a claves de mementos
-      const classToMementoKey: Record<AxieClass, keyof typeof mementoAddresses> = {
-        [AxieClass.BEAST]: 'beast',
-        [AxieClass.AQUA]: 'aqua',
-        [AxieClass.BIRD]: 'bird',
-        [AxieClass.REPTILE]: 'reptile',
-        [AxieClass.BUG]: 'bug',
-        [AxieClass.PLANT]: 'plant',
-        [AxieClass.MECH]: 'mech',
-        [AxieClass.DUSK]: 'dusk',
-        [AxieClass.DAWN]: 'dawn',
+      logger.info('Fetching ERC-1155 memento balances', { 
+        contract: mementoAddress,
+        classes: validMementos.length
+      });
+
+      // Obtener el contrato ERC-1155 usando ethers.Contract
+      const { ethers } = await import('ethers');
+      const mementoContract = new ethers.Contract(
+        mementoAddress,
+        [
+          'function balanceOf(address account, uint256 id) view returns (uint256)',
+        ],
+        provider
+      );
+
+      // Mapeo de nombre de clase a tokenId (0-8)
+      const classNameToTokenId: Record<string, number> = {
+        'beast': 0,
+        'aqua': 1,
+        'bird': 2,
+        'reptile': 3,
+        'bug': 4,
+        'plant': 5,
+        'mech': 6,
+        'dusk': 7,
+        'dawn': 8,
       };
 
-      const balancesData: MementoBalances = {};
+      // Mapear resultados a estructura MementoBalances
+      const balancesData: Partial<MementoBalances> = {};
       
-      // Obtener balance real de cada memento
-      const balancePromises = Object.entries(MOCK_MEMENTO_DATA).map(async ([classId, data]) => {
-        const axieClass = parseInt(classId) as AxieClass;
-        const mementoKey = classToMementoKey[axieClass];
-        const mementoAddress = mementoAddresses[mementoKey];
+      // Leer balance para cada clase (tokenId según nombre)
+      for (const [className, _] of validMementos) {
+        const tokenId = classNameToTokenId[className.toLowerCase()];
+        
+        if (tokenId === undefined) {
+          logger.warn(`Unknown class name: ${className}`);
+          continue;
+        }
+        
+        const classNumber = tokenId as AxieClass;
+        const classInfo = AXIE_CLASS_INFO[classNumber];
+        const symbol = `MEMENTO_${classInfo?.name || 'UNKNOWN'}`;
         
         try {
-          // Crear contrato y obtener balance
-          const mementoContract = new ethers.Contract(mementoAddress, ERC20_ABI, provider);
-          const balance = await mementoContract.balanceOf(address);
+          // ERC-1155: balanceOf(address, tokenId)
+          const balance = await mementoContract.balanceOf(address, tokenId);
+          const formatted = (Number(balance) / 1e18).toFixed(2);
           
-          console.log(`  ${data.symbol}: ${ethers.formatEther(balance)}`);
-          
-          return {
-            axieClass,
-            balance,
-            symbol: data.symbol,
-            name: data.name,
+          balancesData[classNumber] = {
+            axieClass: classNumber,
+            balance: balance,
+            formatted,
+            symbol,
             address: mementoAddress,
           };
+          
+          // Balance fetched successfully
         } catch (err) {
-          console.error(`Error obteniendo balance de ${data.symbol}:`, err);
-          return {
-            axieClass,
-            balance: BigInt(0),
-            symbol: data.symbol,
-            name: data.name,
+          logger.warn(`Failed to fetch balance for ${classInfo?.name}`, { 
+            classNumber,
+            tokenId,
+            error: err instanceof Error ? err.message : String(err)
+          });
+          
+          // Set zero balance on error
+          balancesData[classNumber] = {
+            axieClass: classNumber,
+            balance: 0n,
+            formatted: '0.00',
+            symbol,
             address: mementoAddress,
           };
         }
+      }
+
+      logger.info('Balances de Mementos cargados', { 
+        count: Object.keys(balancesData).length
       });
 
-      const balancesArray = await Promise.all(balancePromises);
-      
-      // Convertir array a objeto indexado por axieClass
-      balancesArray.forEach(balance => {
-        balancesData[balance.axieClass] = balance;
-      });
-
-      console.log('✅ Balances de mementos cargados');
-      setBalances(balancesData);
+      setBalances(balancesData as MementoBalances);
     } catch (err) {
-      console.error('Error fetching memento balances:', err);
-      setError('Error al obtener balances de mementos');
+      logger.error('Error cargando balances de Mementos', err);
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(errorMsg);
+      setBalances(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [address, chain, tokenService]);
 
-  /**
-   * Obtener balance de un memento específico
-   */
-  const getBalance = (axieClass: AxieClass): bigint => {
-    return balances[axieClass]?.balance || BigInt(0);
-  };
+  // Auto-load al montar o cuando cambia la wallet/chain
+  useEffect(() => {
+    if (autoLoad && address) {
+      loadBalances();
+    }
+  }, [autoLoad, address, loadBalances]);
 
-  /**
-   * Verificar si tiene suficientes mementos
-   */
-  const hasSufficientBalance = (axieClass: AxieClass, required: bigint): boolean => {
-    const balance = getBalance(axieClass);
-    return balance >= required;
-  };
+  // Refresh interval
+  useEffect(() => {
+    if (!address || !refreshInterval) return;
 
-  /**
-   * Obtener balance formateado como string (sin decimales)
-   */
-  const getFormattedBalance = (axieClass: AxieClass): string => {
-    const balance = getBalance(axieClass);
-    // Convertir de Wei a Ether y formatear sin decimales
-    return Math.floor(Number(balance) / 1e18).toString();
-  };
+    const interval = setInterval(() => {
+      loadBalances();
+    }, refreshInterval);
 
-  /**
-   * Refrescar balances manualmente
-   */
-  const refresh = () => {
-    fetchBalances();
-  };
+    return () => clearInterval(interval);
+  }, [address, refreshInterval, loadBalances]);
 
   return {
     balances,
     isLoading,
     error,
-    getBalance,
-    hasSufficientBalance,
-    getFormattedBalance,
-    refresh,
-  };
-}
-
-/**
- * Hook simplificado para obtener el balance de un memento específico
- */
-export function useMementoBalance(axieClass: AxieClass) {
-  const { balances, isLoading, error } = useMementoBalances();
-  
-  const balance = balances[axieClass]?.balance || BigInt(0);
-  const symbol = balances[axieClass]?.symbol || '';
-  const name = balances[axieClass]?.name || '';
-
-  return {
-    balance,
-    symbol,
-    name,
-    isLoading,
-    error,
+    reload: loadBalances,
   };
 }

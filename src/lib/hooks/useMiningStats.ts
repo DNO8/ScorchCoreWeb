@@ -1,111 +1,175 @@
 /**
- * Hook para obtener estadísticas de minería del usuario
- * Obtiene datos reales del contrato MiningScheduler
+ * Hook para consultar estadísticas de minería
+ * 
+ * Proporciona información sobre el estado de minería de un minero:
+ * - Recompensas pendientes
+ * - Estado de minería activo/inactivo
+ * - Información del minero
+ * - Estadísticas de minería
+ * 
+ * @category Mining
+ * @example
+ * ```tsx
+ * function MinerCard({ minerId }: { minerId: bigint }) {
+ *   const { stats, isLoading, reload } = useMiningStats(minerId);
+ *   
+ *   if (isLoading) return <Loading />;
+ *   
+ *   return (
+ *     <div>
+ *       <p>Mining: {stats?.isMining ? 'Sí' : 'No'}</p>
+ *       <p>Rewards: {stats?.pendingRewards.toString()}</p>
+ *     </div>
+ *   );
+ * }
+ * ```
  */
 
-import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { useContracts } from './useContracts';
-import { ethers } from 'ethers';
-import { MINING_SCHEDULER_ABI } from '@/lib/abis';
+import { useState, useEffect, useCallback } from 'react';
+import { useContractManager } from './useContractManager';
+import type { PendingRewards, MinerInfo, MinerStats } from '@/lib/contracts/interfaces/IMiningContract';
+import { createServiceLogger } from '@/lib/utils/logger';
 
-export interface MiningStats {
-  totalCOREMined: string;
-  dailyRate: string;
-  activeMiningCycles: number;
-  pendingRewards: string;
-  isLoading: boolean;
-  error: string | null;
+const logger = createServiceLogger('useMiningStats');
+
+/**
+ * Estadísticas completas de minería de un minero
+ */
+export interface MiningStatsData {
+  /** Si el minero está minando actualmente */
+  isMining: boolean;
+  
+  /** Información del minero */
+  minerInfo: MinerInfo | null;
+  
+  /** Estadísticas de minería */
+  minerStats: MinerStats | null;
+  
+  /** Recompensas pendientes */
+  pendingRewards: PendingRewards | null;
 }
 
-export function useMiningStats(): MiningStats {
-  const { address, isConnected } = useAccount();
-  const contracts = useContracts();
+/**
+ * Opciones de configuración
+ */
+export interface UseMiningStatsOptions {
+  /**
+   * Si debe cargar automáticamente al montar
+   * @default true
+   */
+  autoLoad?: boolean;
+
+  /**
+   * Intervalo de recarga automática en ms
+   * @default 30000 (30 segundos)
+   */
+  refreshInterval?: number;
+}
+
+/**
+ * Valor de retorno del hook
+ */
+export interface UseMiningStatsReturn {
+  /** Estadísticas de minería */
+  stats: MiningStatsData | null;
   
-  const [stats, setStats] = useState<MiningStats>({
-    totalCOREMined: '0',
-    dailyRate: '0',
-    activeMiningCycles: 0,
-    pendingRewards: '0',
-    isLoading: false,
-    error: null,
-  });
+  /** Indica si está cargando */
+  isLoading: boolean;
+  
+  /** Mensaje de error */
+  error: string | null;
+  
+  /** Función para recargar estadísticas */
+  reload: () => Promise<void>;
+}
 
-  useEffect(() => {
-    if (!isConnected || !address || !contracts?.miningScheduler) {
-      setStats(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'No connected or contracts not available',
-      }));
+/**
+ * Hook para consultar estadísticas de minería
+ */
+export function useMiningStats(
+  minerId: bigint | null,
+  options: UseMiningStatsOptions = {}
+): UseMiningStatsReturn {
+  const {
+    autoLoad = true,
+    refreshInterval = 30000,
+  } = options;
+
+  const { contractManager } = useContractManager();
+  
+  const [stats, setStats] = useState<MiningStatsData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Carga las estadísticas de minería
+   */
+  const loadStats = useCallback(async () => {
+    if (!minerId) {
+      setStats(null);
       return;
     }
 
-    // Verificar si el contrato está deployado
-    if (contracts.miningScheduler === '0x0000000000000000000000000000000000000000') {
-      // Usar datos mock si el contrato no está deployado
-      setStats({
-        totalCOREMined: '0',
-        dailyRate: '0',
-        activeMiningCycles: 0,
-        pendingRewards: '0',
-        isLoading: false,
-        error: 'Contract not deployed yet',
+    logger.info('Cargando estadísticas de minería', { minerId: minerId.toString() });
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const miningPool = contractManager.getMiningPool();
+
+      // Cargar todos los datos en paralelo
+      const [isMining, minerInfo, minerStats, pendingRewards] = await Promise.all([
+        miningPool.isMining(minerId),
+        miningPool.getMinerInfo(minerId),
+        miningPool.getMinerStats(minerId),
+        miningPool.getPendingRewards(minerId),
+      ]);
+
+      const statsData: MiningStatsData = {
+        isMining,
+        minerInfo,
+        minerStats,
+        pendingRewards,
+      };
+
+      setStats(statsData);
+      logger.info('Estadísticas cargadas', { 
+        minerId: minerId.toString(),
+        isMining,
+        pendingAmount: pendingRewards.totalAmount.toString()
       });
-      return;
+    } catch (err) {
+      logger.error('Error cargando estadísticas', err);
+      const errorMsg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(errorMsg);
+      setStats(null);
+    } finally {
+      setIsLoading(false);
     }
+  }, [minerId, contractManager]);
 
-    const loadStats = async () => {
-      setStats(prev => ({ ...prev, isLoading: true, error: null }));
+  // Auto-load al montar o cuando cambia minerId
+  useEffect(() => {
+    if (autoLoad && minerId) {
+      loadStats();
+    }
+  }, [autoLoad, minerId, loadStats]);
 
-      try {
-        // TODO: Implementar cuando el contrato esté deployado
-        // const provider = new ethers.JsonRpcProvider(
-        //   'https://saigon-testnet.roninchain.com/rpc' // o mainnet según sea necesario
-        // );
-        // const contract = new ethers.Contract(
-        //   contracts.miningScheduler,
-        //   MINING_SCHEDULER_ABI,
-        //   provider
-        // );
+  // Refresh interval
+  useEffect(() => {
+    if (!minerId || !refreshInterval) return;
 
-        // const [totalMined, activeCycles, pendingRewards, dailyRate] = await Promise.all([
-        //   contract.getUserTotalMined(address),
-        //   contract.getUserActiveCycles(address),
-        //   contract.getUserPendingRewards(address),
-        //   contract.calculateUserDailyRate(address),
-        // ]);
+    const interval = setInterval(() => {
+      loadStats();
+    }, refreshInterval);
 
-        // setStats({
-        //   totalCOREMined: ethers.formatEther(totalMined),
-        //   dailyRate: ethers.formatEther(dailyRate),
-        //   activeMiningCycles: Number(activeCycles),
-        //   pendingRewards: ethers.formatEther(pendingRewards),
-        //   isLoading: false,
-        //   error: null,
-        // });
+    return () => clearInterval(interval);
+  }, [minerId, refreshInterval, loadStats]);
 
-        // Mientras tanto, retornar datos vacíos
-        setStats({
-          totalCOREMined: '0',
-          dailyRate: '0',
-          activeMiningCycles: 0,
-          pendingRewards: '0',
-          isLoading: false,
-          error: null,
-        });
-      } catch (error) {
-        console.error('Error loading mining stats:', error);
-        setStats(prev => ({
-          ...prev,
-          isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to load stats',
-        }));
-      }
-    };
-
-    loadStats();
-  }, [isConnected, address, contracts]);
-
-  return stats;
+  return {
+    stats,
+    isLoading,
+    error,
+    reload: loadStats,
+  };
 }

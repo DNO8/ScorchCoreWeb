@@ -9,6 +9,7 @@ import { useNFTs } from '@/lib/hooks/useNFTs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import type { AxieNFT, MinerNFT } from './types';
 
 interface NFTInventoryProps {
   stakingContractAddress?: string;
@@ -160,7 +161,7 @@ function StatCard({
 }
 
 // Componente de tarjeta de Axie
-function AxieCard({ axie }: { axie: any }) {
+function AxieCard({ axie }: { axie: AxieNFT }) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative aspect-square">
@@ -207,9 +208,9 @@ function AxieCard({ axie }: { axie: any }) {
 }
 
 // Componente de tarjeta de Minero
-function MinerCard({ miner }: { miner: any }) {
+function MinerCard({ miner }: { miner: MinerNFT }) {
   const rarityAttr = miner.metadata.attributes.find(
-    (attr: any) => attr.trait_type === 'Rarity'
+    (attr) => attr.trait_type === 'Rarity'
   );
   const rarity = rarityAttr?.value || 'Common';
 

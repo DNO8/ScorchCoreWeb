@@ -3,7 +3,10 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Modal, Button } from '@/components/ui';
+import { createServiceLogger } from '@/lib/utils/logger';
 import { GeodeCategory, AxieClass } from '@/lib/constants/geodes';
+
+const log = createServiceLogger('HatchSuccessModal');
 
 interface HatchSuccessModalProps {
   isOpen: boolean;
@@ -14,7 +17,7 @@ interface HatchSuccessModalProps {
   minerName: string;
   minerRarity: string;
   minerPower: number;
-  minerVideoPath: string; // Ruta completa al video del miner
+  minerVideoUrl: string; // URL del video del miner desde Piñata
 }
 
 export function HatchSuccessModal({
@@ -26,7 +29,7 @@ export function HatchSuccessModal({
   minerName,
   minerRarity,
   minerPower,
-  minerVideoPath
+  minerVideoUrl
 }: HatchSuccessModalProps) {
   const router = useRouter();
   
@@ -68,13 +71,16 @@ export function HatchSuccessModal({
             playsInline
             className="w-full h-full object-cover"
             onError={(e) => {
-              console.error('Error loading miner video:', minerVideoPath);
+              log.error('Failed to load miner video', undefined, { 
+                minerId: minerId.toString(), 
+                minerVideoUrl 
+              });
               // Fallback: mostrar imagen
               const target = e.target as HTMLVideoElement;
               target.style.display = 'none';
             }}
           >
-            <source src={minerVideoPath} type="video/mp4" />
+            <source src={minerVideoUrl} type="video/mp4" />
           </video>
         </div>
 

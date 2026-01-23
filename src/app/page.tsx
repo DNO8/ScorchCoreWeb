@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
 import { useWallet } from "@/lib/hooks/useWallet";
@@ -9,7 +8,6 @@ import { useWallet } from "@/lib/hooks/useWallet";
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
   const [showBanner, setShowBanner] = useState(false);
-  const router = useRouter();
   const { isConnected } = useWallet();
 
   useEffect(() => {
@@ -35,7 +33,7 @@ export default function Home() {
 
       {/* Banner temporal para usuarios conectados */}
       {showBanner && (
-        <div className="sticky top-16 z-30 bg-gradient-to-r from-orange-600 to-red-600 border-b border-orange-500 animate-in slide-in-from-top duration-300">
+        <div className="sticky top-16 z-30 bg-linear-to-r from-orange-600 to-red-600 border-b border-orange-500 animate-in slide-in-from-top duration-300">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -46,10 +44,10 @@ export default function Home() {
                 </p>
               </div>
               <button
-                type="button"
                 onClick={() => setShowBanner(false)}
                 className="text-white hover:text-gray-200 shrink-0"
                 aria-label="Cerrar banner"
+                type="button"
               >
                 ✕
               </button>
@@ -102,9 +100,8 @@ export default function Home() {
               strokeWidth="2"
               viewBox="0 0 24 24"
               stroke="currentColor"
-              aria-label="Flecha hacia abajo para desplazarse"
+              aria-label="Flecha hacia abajo indicando desplazamiento"
             >
-              <title>Flecha hacia abajo</title>
               <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
             </svg>
           </div>

@@ -153,6 +153,16 @@ export const thumbnailNames: Record<string, string[]> = {
     'GOTA_DE_ROCIO-thumbnail.webp',
     'GOTA_RAPIDA-thumbnail.webp',
   ],
+  // PETIT BESTIA
+  'PETIT_BESTIA': [
+    'CACHORRO AGIL.png',
+    'CACHORRO ALFA.png',
+    'CAZADOR JOVEN.png',
+    'CRIA FEROZ.png',
+    'EXPLORADOR AUDAZ.png',
+    'GARRA IMPACIENTE.png',
+    'RESTREADOR TENAZ.png',
+  ],
   // PETIT AVE
   'PETIT_AVE': [
     'ALA_VELOZ-thumbnail.webp',
@@ -182,6 +192,16 @@ export const thumbnailNames: Record<string, string[]> = {
     'PENUMBRA_CONSTANTE-thumbnail.webp',
     'SOMBRA_ASECHANTE-thumbnail.webp',
     'SUSURRO_NOCTURNO-thumbnail.webp',
+  ],
+  // PETIT DAWN
+  'PETIT_DAWN': [
+    'CHISPA DEL SOL.png',
+    'CLARIDAD CONSTANTE.png',
+    'DESTELLO PRECISO.png',
+    'GOTA DE ROCIO.png',
+    'LUZ PURA.png',
+    'RAYO DEL SOL.png',
+    'VIGIA DEL ALBA.png',
   ],
   // PETIT MECH
   'PETIT_MECH': [
