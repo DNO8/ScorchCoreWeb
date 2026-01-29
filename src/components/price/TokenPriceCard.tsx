@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { Card, Badge, Loading } from '@/components/ui';
-import { usePriceOracle } from '@/lib/hooks/usePriceOracle';
+import { usePriceOracle } from '@/lib/hooks/economy/usePriceOracle';
 
 export interface TokenPriceCardProps {
   variant?: 'default' | 'compact';

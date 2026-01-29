@@ -18,7 +18,7 @@ import { ContractManager } from '@/lib/contracts/ContractManager';
 import { ForgeTokenService } from './ForgeTokenService';
 import { ForgeRecipeService } from './ForgeRecipeService';
 import { GeodeHatchService } from './GeodeHatchService';
-import { retryTransaction } from '@/lib/utils/retry';
+import { retryTransaction } from '@/lib/utils/network/retry';
 import { validateInput } from '@/lib/services/validation/schemas';
 import {
   GeodeTypeSchema,
@@ -31,7 +31,7 @@ import {
   AddressSchema,
   TokenIdSchema,
 } from '@/lib/services/validation/schemas';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('ForgeFacade');
 import type {

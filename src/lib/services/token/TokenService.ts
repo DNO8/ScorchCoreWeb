@@ -10,7 +10,7 @@
 import type { Address } from 'viem';
 import { ContractManager } from '@/lib/contracts/ContractManager';
 import { ethers } from 'ethers';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import type {
   TokenBalance,
   TokenBalances,

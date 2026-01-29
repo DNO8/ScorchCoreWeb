@@ -11,7 +11,7 @@
  */
 
 import { WaypointProvider, authorize } from '@sky-mavis/waypoint';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import type { WaypointConfig, WaypointConnectionResult } from './types';
 
 const logger = createServiceLogger('WaypointService');

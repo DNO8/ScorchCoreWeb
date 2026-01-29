@@ -19,7 +19,7 @@ import {
   type RecipeInfo,
   type Recipe
 } from '@/lib/contracts/interfaces/IRecipeRegistry';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('RecipeService');
 

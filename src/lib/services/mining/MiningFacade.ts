@@ -19,7 +19,7 @@ import { MiningOperationsService } from './MiningOperationsService';
 import { MiningSessionService } from './MiningSessionService';
 import { MiningRewardsService } from './MiningRewardsService';
 import { MinerFeedingService } from './MinerFeedingService';
-import { retryTransaction } from '@/lib/utils/retry';
+import { retryTransaction } from '@/lib/utils/network/retry';
 import { validateInput } from '@/lib/services/validation/schemas';
 import {
   StartMiningInputSchema,
@@ -30,7 +30,7 @@ import {
   TokenIdSchema,
   AddressSchema,
 } from '@/lib/services/validation/schemas';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('MiningFacade');
 import type {

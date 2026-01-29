@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
-import { useCollectionBonus } from '@/lib/hooks/useCollectionBonus';
+import { useWallet } from '@/lib/hooks/user/useWallet';
+import { useCollectionBonus } from '@/lib/hooks/economy/useCollectionBonus';
 import { Card, Button, Badge, Loading } from '@/components/ui';
 import { Award, TrendingUp, Lock, CheckCircle, XCircle, Target } from 'lucide-react';
 import Link from 'next/link';

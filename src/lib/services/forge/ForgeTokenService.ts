@@ -10,7 +10,7 @@
 import type { Address } from 'viem';
 import { ContractManager } from '@/lib/contracts/ContractManager';
 import { BaseForgeService } from '@/lib/services/base/BaseForgeService';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('ForgeTokenService');
 import type { IForgeContract } from '@/lib/contracts/interfaces';

@@ -11,7 +11,7 @@ import type { Address } from 'viem';
 import { USERCOLLECTIONTRACKER_ABI } from '@/lib/abis/mining.abis';
 import type { ICollectionTracker } from '../interfaces/ICollectionContract';
 import type { TransactionResult } from '../interfaces/IBlockchainContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const logger = createServiceLogger('CollectionTrackerFactory');
 

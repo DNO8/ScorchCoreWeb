@@ -15,7 +15,7 @@ import type {
   ConvertfCoreResult,
   fCoreSystemInfo 
 } from './types';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('fCoreService');
 

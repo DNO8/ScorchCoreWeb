@@ -13,68 +13,69 @@
 // CORE - Infraestructura base
 // ==========================================
 // Export all hooks from this barrel
-export * from './useWallet';
-export * from './useContractManager';
-export * from './useMining';
-export * from './useNFTs';
-export * from './useForgeFacade';
-export * from './useNFTFacade';
-export * from './useMiningStats';
-export * from './useTokenService';
-export * from './useMementoBalances';
-export * from './useInventoryFacade';
+export * from './user/useWallet';
+export * from './contracts/useContractManager';
+export * from './mining/useMining';
+export * from './nfts/useNFTs';
+export * from './facades/useForgeFacade';
+export * from './facades/useNFTFacade';
+export * from './mining/useMiningStats';
+export * from './services/useTokenService';
+export * from './economy/useMementoBalances';
+export * from './facades/useInventoryFacade';
 
 // Export new hooks
-export * from './useContracts';
-export * from './useUserData';
-export * from './useMetadataService';
+export * from './contracts/useContracts';
+export * from './user/useUserData';
+export * from './services/useMetadataService';
 
 // ==========================================
 // NFT - Gestión de NFTs
 // ==========================================
-export { useNFTFacade } from './useNFTFacade';
-export { useNFTs } from './useNFTs';
+export { useNFTFacade } from './facades/useNFTFacade';
+export { useNFTs } from './nfts/useNFTs';
 export type { 
   UseNFTsOptions, 
   UseNFTsReturn 
-} from './useNFTs';
+} from './nfts/useNFTs';
 
 // ==========================================
 // FORGE - Forja y eclosión
 // ==========================================
-export { useForgeFacade } from './useForgeFacade';
-export { useInventoryFacade } from './useInventoryFacade';
+export { useForgeFacade } from './facades/useForgeFacade';
+export { useInventoryFacade } from './facades/useInventoryFacade';
+export { useGeodeStaking } from './nfts/useGeodeStaking';
 
 // ==========================================
 // MINING - Operaciones de minería
 // ==========================================
 // Mining hooks
-export { useMining } from './useMining';
-export { useCycleManager, useCycleBonusInfo, useUserCyclesSummary } from './useCycleManager';
-export { useMinerActions } from './useMinerActions';
-export type { UseMiningReturn } from './useMining';
-export type { UseCycleManagerReturn } from './useCycleManager';
-export type { UseMinerActionsReturn, MinerActionResult } from './useMinerActions';
+export { useMining } from './mining/useMining';
+export { useCycleManager, useCycleBonusInfo, useUserCyclesSummary } from './economy/useCycleManager';
+export { useMinerActions } from './mining/useMinerActions';
+export type { UseMiningReturn } from './mining/useMining';
+export type { UseCycleManagerReturn } from './economy/useCycleManager';
+export type { UseMinerActionsReturn, MinerActionResult } from './mining/useMinerActions';
 
 // fCore System Hook (Anti-Bot)
 export {
   usefCoreBalance,
   type UsefCoreBalanceReturn
-} from './usefCoreBalance';
+} from './economy/usefCoreBalance';
 
 export type {
   MiningStatsData,
   UseMiningStatsOptions,
   UseMiningStatsReturn
-} from './useMiningStats';
+} from './mining/useMiningStats';
 
 // ==========================================
 // BALANCE - Consulta de balances
 // ==========================================
-export { useMementoBalances } from './useMementoBalances';
+export { useMementoBalances } from './economy/useMementoBalances';
 export type {
   MementoBalance,
   MementoBalances,
   UseMementoBalancesOptions,
   UseMementoBalancesReturn
-} from './useMementoBalances';
+} from './economy/useMementoBalances';

@@ -10,7 +10,7 @@
 
 import type { ContractManager } from '@/lib/contracts/ContractManager';
 import type { EmissionInfo } from '@/lib/contracts/interfaces/IEconomyContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('EmissionScheduleService');
 

@@ -12,7 +12,7 @@
 
 import type { Address } from 'viem';
 import { ContractManager } from '@/lib/contracts/ContractManager';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import type { NFTMetadata } from '@/lib/contracts/interfaces/INFTContract';
 import type { MetadataServiceConfig, EnrichedNFTMetadata } from './types';
 
@@ -309,7 +309,7 @@ export class MetadataService {
     return {
       name: `Core Miner #${minerId}`,
       description: 'Core Miner NFT',
-      image: '/images/miners/fallback.png',
+      image: '/assets/miners/fallback.png',
       attributes: [],
       tokenId: minerId,
     };

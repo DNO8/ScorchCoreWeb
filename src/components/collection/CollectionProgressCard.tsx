@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { Card, Badge, Loading } from '@/components/ui';
-import { useCollectionBonus } from '@/lib/hooks/useCollectionBonus';
+import { useCollectionBonus } from '@/lib/hooks/economy/useCollectionBonus';
 import type { SetProgress } from '@/lib/services/collection';
 
 export interface CollectionProgressCardProps {

@@ -8,8 +8,8 @@
 
 import type { Address } from 'viem';
 import type { ContractManager } from '../contracts/ContractManager';
-import { createServiceLogger } from '../utils/logger';
-import { withRetry, isRetryableBlockchainError } from '../utils/retry';
+import { createServiceLogger } from '../utils/logging/logger';
+import { withRetry, isRetryableBlockchainError } from '../utils/network/retry';
 import { 
   GeodeCategory,
   AxieClass,
@@ -22,6 +22,7 @@ const logger = createServiceLogger('InventoryFacade');
 
 /**
  * Información completa de una geoda en inventario
+ * Las geodas tienen poder de minado según whitepaper y pueden ir a staking
  */
 export interface GeodeInventoryInfo {
   id: bigint;
@@ -35,6 +36,11 @@ export interface GeodeInventoryInfo {
   hatchTime: number;
   isHatched: boolean;
   canHatch: boolean;
+  
+  // Para staking: las geodas tienen poder de minado
+  miningPower: number;
+  efficiency: number;
+  isStaked?: boolean;
 }
 
 /**
@@ -241,7 +247,19 @@ export class InventoryFacade {
         // Verificar si ya fue eclosionada
         const isHatched = await this.isGeodeHatched(forgeContract, id);
 
-        logger.debug(`Geoda ${id} cargada - ${fullName}`);
+        // Calcular poder de minado según categoría (según whitepaper y Manual de Forja)
+        const categoryPowerMap: Record<GeodeCategory, number> = {
+          [GeodeCategory.PETIT]: 75,      // Corregido: 75 según Manual de Forja oficial
+          [GeodeCategory.ALTO]: 125,
+          [GeodeCategory.ANIMAL]: 165,
+          [GeodeCategory.ULTRAMECH]: 165,
+          [GeodeCategory.TANQUE]: 250
+        };
+        
+        const miningPower = categoryPowerMap[category] || 75;
+        const efficiency = 80; // Base efficiency para geodas
+        
+        logger.debug(`Geoda ${id} cargada - ${fullName} (Power: ${miningPower})`);
 
         return {
           id,
@@ -254,7 +272,10 @@ export class InventoryFacade {
           createdAt: forgeDate,
           hatchTime,
           isHatched,
-          canHatch: canHatch && !isHatched,
+          canHatch,
+          miningPower,
+          efficiency,
+          isStaked: false // TODO: Verificar estado de staking real
         };
       } catch (error) {
         logger.warn(`Error cargando geoda ${id}`, { error });

@@ -5,20 +5,24 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge, Modal, Toast, useToast } from '@/components/ui';
-import { useWallet } from '@/lib/hooks/useWallet';
-import { useNFTs } from '@/lib/hooks/useNFTs';
-import { useMining } from '@/lib/hooks/useMining';
-import { useContracts } from '@/lib/hooks/useContracts';
-import { useMetadataService } from '@/lib/hooks/useMetadataService';
-import { useCycleManager } from '@/lib/hooks';
+import { useWallet } from '@/lib/hooks/user/useWallet';
+import { useNFTs } from '@/lib/hooks/nfts/useNFTs';
+import { useMining } from '@/lib/hooks/mining/useMining';
+import { useContracts } from '@/lib/hooks/contracts/useContracts';
+import { useContractManager } from '@/lib/hooks/contracts/useContractManager';
+import { useMetadataService } from '@/lib/hooks/services/useMetadataService';
+import { useCycleManager, useGeodeStaking, useInventoryFacade } from '@/lib/hooks';
 import { CycleDurationSelector, MinerLockedIndicator, ActiveCycleCard } from '@/components/cycle';
 import { MinerStatsHistoryCardCompact } from '@/components/minerstats';
-import { useMinerStatsHistory } from '@/lib/hooks/useMinerStatsHistory';
+import { useMinerStatsHistory } from '@/lib/hooks/mining/useMinerStatsHistory';
 import { CycleDuration } from '@/lib/contracts/interfaces/ICycleContract';
-import { getMinerVideoUrl } from '@/lib/utils/minerNames';
+import { getMinerVideoUrl } from '@/lib/utils/data/minerNames';
+import { GeodeVideo } from '@/components/GeodeVideo';
+import { CATEGORY_INFO, AXIE_CLASS_INFO, GeodeCategory, AxieClass } from '@/lib/constants/geodes';
+import type { GeodeInventoryInfo } from '@/lib/facades/InventoryFacade';
 import { ethers } from 'ethers';
 import Link from 'next/link';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import type { CoreMiner } from '@/types/game';
 
 const logger = createServiceLogger('StakingPage');
@@ -50,19 +54,27 @@ export default function StakingPage() {
   const router = useRouter();
   const { address, isConnected } = useWallet();
   const contracts = useContracts();
+  const { contractManager } = useContractManager();
   const { toast, showSuccess, showError, showInfo, hideToast } = useToast();
   const { miners, isLoadingMiners, reload: reloadMiners } = useNFTs({
     autoLoad: true,
     minersOnly: true,
   });
 
-  const [selectedMiner, setSelectedMiner] = useState<CoreMinerNFT | null>(null);
+  const [selectedMiner, setSelectedMiner] = useState<any>(null);
   const [showMiningModal, setShowMiningModal] = useState(false);
   const [activeMinerSessions, setActiveMinerSessions] = useState<Map<string, MiningSession>>(new Map());
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   
   // Cycle Management
   const { activeCycles, bonusInfo, endCycle, isLoading: isCycleLoading } = useCycleManager();
+  
+  // Geode Staking
+  const inventoryFacade = useInventoryFacade();
+  const { stake: stakeGeode, unstake: unstakeGeode, getStakedGeodes, isLoading: isGeodeStakingLoading } = useGeodeStaking();
+  const [geodes, setGeodes] = useState<GeodeInventoryInfo[]>([]);
+  const [stakedGeodeIds, setStakedGeodeIds] = useState<bigint[]>([]);
+  const [isLoadingGeodes, setIsLoadingGeodes] = useState(false);
 
   // Redirect si no está conectado
   useEffect(() => {
@@ -136,6 +148,114 @@ export default function StakingPage() {
 
     return () => clearInterval(interval);
   }, [miners.length, contracts?.miningScheduler]);
+
+  // Cargar geodas del usuario (disponibles + stakeadas)
+  const loadGeodes = async () => {
+    if (!address) return;
+    
+    logger.info('Cargando geodas del usuario', { address });
+    setIsLoadingGeodes(true);
+    
+    try {
+      // 1. Cargar geodas disponibles (que aún son propiedad del usuario)
+      const availableGeodes = await inventoryFacade.getUserGeodes(address);
+      
+      // 2. Obtener IDs de geodas stakeadas
+      const stakedIds = await getStakedGeodes(address);
+      
+      // 3. Si hay geodas stakeadas, cargarlas también
+      let stakedGeodes: GeodeInventoryInfo[] = [];
+      if (stakedIds.length > 0) {
+        // Cargar info de cada geoda stakeada individualmente
+        const geodeContract = await contractManager?.getGeodeNFT();
+        const forgeContract = await contractManager?.getForgeFactory();
+        
+        if (geodeContract && forgeContract) {
+          for (const geodeId of stakedIds) {
+            try {
+              const info = await geodeContract.getGeodeInfo(geodeId);
+              const categoryInfo = CATEGORY_INFO[Number(info.category) as GeodeCategory];
+              const classInfo = AXIE_CLASS_INFO[Number(info.axieClass) as AxieClass];
+              
+              stakedGeodes.push({
+                id: geodeId,
+                category: Number(info.category),
+                axieClass: Number(info.axieClass),
+                categoryName: categoryInfo.name,
+                className: classInfo.displayName,
+                fullName: `${categoryInfo.displayName} ${classInfo.displayName}`,
+                owner: address, // Owner original
+                createdAt: 0, // No necesitamos timestamp exacto para stakeadas
+                hatchTime: 0,
+                isHatched: false,
+                canHatch: false,
+                miningPower: categoryInfo.miningPower,
+                efficiency: 80,
+                isStaked: true // ✅ Marcar como stakeada
+              });
+            } catch (err) {
+              logger.warn(`Error cargando geoda stakeada ${geodeId}`, err);
+            }
+          }
+        }
+      }
+      
+      // 4. Combinar ambas listas
+      const allGeodes = [
+        ...availableGeodes.map(g => ({ ...g, isStaked: false })),
+        ...stakedGeodes
+      ];
+      
+      setGeodes(allGeodes);
+      setStakedGeodeIds(stakedIds);
+      logger.info('Geodas cargadas exitosamente', { 
+        available: availableGeodes.length, 
+        staked: stakedGeodes.length,
+        total: allGeodes.length 
+      });
+    } catch (error) {
+      logger.error('Error cargando geodas', error);
+      showError('Error al cargar geodas');
+    } finally {
+      setIsLoadingGeodes(false);
+    }
+  };
+
+  // Ya no es necesario - loadGeodes carga todo junto
+
+  // Stakear una geoda
+  const handleStakeGeode = async (geodeId: bigint) => {
+    try {
+      showInfo('Aprobando y stakeando geoda...');
+      await stakeGeode(geodeId);
+      showSuccess('¡Geoda stakeada exitosamente!');
+      await loadGeodes(); // Recarga todo (disponibles + stakeadas)
+    } catch (error) {
+      logger.error('Error stakeando geoda', error);
+      const errorMsg = error instanceof Error ? error.message : 'Error al stakear geoda';
+      showError(errorMsg);
+    }
+  };
+
+  // Unstakear una geoda
+  const handleUnstakeGeode = async (geodeId: bigint) => {
+    try {
+      showInfo('Unstakeando geoda...');
+      await unstakeGeode(geodeId);
+      showSuccess('¡Geoda unstakeada exitosamente!');
+      await loadGeodes(); // Recarga todo (disponibles + stakeadas)
+    } catch (error) {
+      logger.error('Error unstakeando geoda', error);
+      showError('Error al unstakear geoda');
+    }
+  };
+
+  // Cargar geodas al montar (incluye stakeadas)
+  useEffect(() => {
+    if (address) {
+      loadGeodes();
+    }
+  }, [address]);
 
   // Formatear valores
   const formatFCore = (amount: bigint) => {
@@ -283,6 +403,106 @@ export default function StakingPage() {
         )}
       </Card>
 
+      {/* Geode Staking Section */}
+      <Card variant="glass" className="p-6 mt-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-white">💎 Mis Geodas</h2>
+          <Button variant="outline" size="sm" onClick={loadGeodes} disabled={isLoadingGeodes}>
+            {isLoadingGeodes ? 'Cargando...' : '🔄 Actualizar'}
+          </Button>
+        </div>
+
+        {isLoadingGeodes ? (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">⏳</div>
+            <p className="text-gray-400">Cargando geodas...</p>
+          </div>
+        ) : geodes.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">💎</div>
+            <p className="text-gray-400 mb-2">No tienes geodas aún</p>
+            <Link href="/forge">
+              <Button variant="primary" size="sm">
+                Ir a Forjar
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {geodes.map((geode) => {
+              const isStaked = stakedGeodeIds.some(id => id === geode.id);
+              const categoryInfo = CATEGORY_INFO[geode.category];
+              const classInfo = AXIE_CLASS_INFO[geode.axieClass];
+
+              return (
+                <Card key={geode.id.toString()} variant="gradient" className="overflow-hidden">
+                  {/* Video de la Geoda */}
+                  <div className="h-48 bg-slate-900">
+                    <GeodeVideo
+                      category={geode.category}
+                      axieClass={geode.axieClass}
+                      autoPlay={true}
+                      className="h-full w-full"
+                    />
+                  </div>
+
+                  {/* Información */}
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-bold text-white">
+                        {geode.fullName}
+                      </h3>
+                      {isStaked && (
+                        <Badge variant="success">Staked</Badge>
+                      )}
+                    </div>
+
+                    {/* Stats */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Poder:</span>
+                        <span className="text-white font-semibold">{geode.miningPower}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Categoría:</span>
+                        <span className="text-white">{categoryInfo.displayName}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Clase:</span>
+                        <span className="text-white">{classInfo.displayName}</span>
+                      </div>
+                    </div>
+
+                    {/* Botón de acción */}
+                    {!isStaked ? (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleStakeGeode(geode.id)}
+                        disabled={isGeodeStakingLoading}
+                      >
+                        🔒 Stakear
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleUnstakeGeode(geode.id)}
+                        disabled={isGeodeStakingLoading}
+                      >
+                        🔓 Unstakear
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       {/* Mining Modal */}
       {showMiningModal && selectedMiner && (
         <MiningModal
@@ -349,7 +569,7 @@ function MinerCard({ miner, session, onManage, formatFCore, calculateTimeElapsed
   
   // Obtener video URL desde Piñata metadata con servicio compartido
   const metadataService = useMetadataService();
-  const [videoUrl, setVideoUrl] = useState<string>('/images/miners/fallback.mp4');
+  const [videoUrl, setVideoUrl] = useState<string>('/assets/miners/fallback.mp4');
   
   useEffect(() => {
     getMinerVideoUrl(miner.tokenId, metadataService).then(setVideoUrl);

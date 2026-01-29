@@ -3,12 +3,7 @@
  * 
  * Generado desde: artifacts/contracts/forging/GeodeHatcher.sol/GeodeHatcher.json
  * Contrato: GeodeHatcher
- * Deployed: 0x4f674CB2BB7F1d17d6Fa874f2912c1cee9039922
- * 
- * FIXED: Base powers corregidos según whitepaper
- * - PETIT: 50 (antes 100)
- * - ALTO: 100 (antes 125)
- * - Usa mintMiner() con finalPower calculado
+ * Deployed: 0xD6C112711499b54a6a7f094d03E82a30b6227d35
  */
 
 export const GEODE_HATCHER_ABI = [
@@ -142,6 +137,50 @@ export const GEODE_HATCHER_ABI = [
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "category",
+        "type": "uint8"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "minerType",
+        "type": "uint8"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "minerIndex",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "power",
+        "type": "uint16"
+      }
+    ],
+    "name": "MinerPowerSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "enabled",
+        "type": "bool"
+      }
+    ],
+    "name": "PowerTableToggled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "address",
         "name": "newProvider",
@@ -255,6 +294,34 @@ export const GEODE_HATCHER_ABI = [
   {
     "inputs": [
       {
+        "internalType": "uint8[]",
+        "name": "categories",
+        "type": "uint8[]"
+      },
+      {
+        "internalType": "uint8[]",
+        "name": "minerTypes",
+        "type": "uint8[]"
+      },
+      {
+        "internalType": "uint8[]",
+        "name": "minerIndexes",
+        "type": "uint8[]"
+      },
+      {
+        "internalType": "uint16[]",
+        "name": "powers",
+        "type": "uint16[]"
+      }
+    ],
+    "name": "batchSetMinerPowers",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "user",
         "type": "address"
@@ -316,6 +383,35 @@ export const GEODE_HATCHER_ABI = [
         "internalType": "contract IGeodeNFT",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "category",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "minerType",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "minerIndex",
+        "type": "uint8"
+      }
+    ],
+    "name": "getMinerPower",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "power",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -390,6 +486,35 @@ export const GEODE_HATCHER_ABI = [
         "internalType": "contract IHatchingRandomness",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "minerPowerTable",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -510,6 +635,34 @@ export const GEODE_HATCHER_ABI = [
   {
     "inputs": [
       {
+        "internalType": "uint8",
+        "name": "category",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "minerType",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint8",
+        "name": "minerIndex",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint16",
+        "name": "power",
+        "type": "uint16"
+      }
+    ],
+    "name": "setMinerPower",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "bool",
         "name": "_paused",
         "type": "bool"
@@ -542,6 +695,32 @@ export const GEODE_HATCHER_ABI = [
       }
     ],
     "name": "supportsInterface",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "enabled",
+        "type": "bool"
+      }
+    ],
+    "name": "togglePowerTable",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "usePowerTable",
     "outputs": [
       {
         "internalType": "bool",

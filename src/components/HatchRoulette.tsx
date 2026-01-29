@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { GeodeCategory, AxieClass } from '@/lib/constants/geodes';
 import { gsap } from 'gsap';
 import { thumbnailNames } from './thumbnailMappings';
-import type { HatchResult } from './types/HatchTypes';
-import { createServiceLogger } from '@/lib/utils/logger';
+import type { HatchResult as ComponentHatchResult } from './types/HatchTypes';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const logger = createServiceLogger('HatchRoulette');
 
@@ -13,9 +13,10 @@ interface HatchRouletteProps {
   category: GeodeCategory;
   axieClass: AxieClass;
   isVisible: boolean;
-  onComplete: (result: HatchResult) => void;
+  onComplete: (result: ComponentHatchResult) => void;
   loopUntilConfirm?: boolean;
   isConfirmed?: boolean;
+  selectedMinerIndex?: number; // Índice REAL del contrato
 }
 
 // Obtener nombres de thumbnails según tipo de geoda
@@ -30,13 +31,13 @@ const getThumbnails = (category: GeodeCategory, axieClass: AxieClass): string[] 
 
   const classMap: Record<number, string> = {
     [AxieClass.AQUA]: 'AQUA',
-    [AxieClass.BIRD]: 'AVE',
-    [AxieClass.BUG]: 'BICHO',
+    [AxieClass.BIRD]: 'BIRD',
+    [AxieClass.BUG]: 'BUG',
     [AxieClass.DUSK]: 'DUSK',
     [AxieClass.MECH]: 'MECH',
-    [AxieClass.PLANT]: 'PLANTA',
-    [AxieClass.REPTILE]: 'REPTIL',
-    [AxieClass.BEAST]: 'BESTIA',
+    [AxieClass.PLANT]: 'PLANT',
+    [AxieClass.REPTILE]: 'REPTILE',
+    [AxieClass.BEAST]: 'BEAST',
     [AxieClass.DAWN]: 'DAWN'
   };
 
@@ -44,14 +45,11 @@ const getThumbnails = (category: GeodeCategory, axieClass: AxieClass): string[] 
   // Para ULTRAMECH, las subcarpetas usan "ULTRA" en lugar de "ULTRAMECH"
   const subfolder = category === GeodeCategory.ULTRAMECH ? 'ULTRA' : categoryFolder;
   
-  // Para PETIT-BEAST y PETIT-DAWN, las carpetas usan guión en lugar de espacio
+  // NORMALIZADO: Todas las carpetas usan snake_case (guión bajo)
   const className = classMap[axieClass];
-  let classFolder = `${subfolder} ${className}`;
-  if (category === GeodeCategory.PETIT && (axieClass === AxieClass.BEAST || axieClass === AxieClass.DAWN)) {
-    classFolder = `${subfolder}-${className}`;
-  }
+  const classFolder = `${subfolder}_${className}`;
   
-  const basePath = `/images/miners-thumbnails/${categoryFolder}/${classFolder}`;
+  const basePath = `/assets/miners-thumbnails/${categoryFolder}/${classFolder}`;
 
   // Usar el mapping importado desde thumbnailMappings.ts
   // El mapping contiene todos los thumbnails para PETIT, ALTO, ANIMAL, ULTRAMECH y TANK
@@ -72,209 +70,100 @@ const getThumbnails = (category: GeodeCategory, axieClass: AxieClass): string[] 
 // Datos de mineros según manual de forja
 interface MinerData {
   name: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: 'common' | 'rare' | 'very-rare' | 'epic' | 'legendary';
   probability: number;
   power: number;
 }
 
-// Mapeo de mineros según tipo de geoda (basado en manual.txt)
-const getMinerData = (category: GeodeCategory, axieClass: AxieClass): MinerData[] => {
-  const key = `${category}_${axieClass}`;
-  
-  // Mapeo completo de nombres reales según manual.txt
-  const minerNames: Record<string, MinerData[]> = {
-    // PETIT BEAST (0_0)
-    '0_0': [
-      { name: 'Cachorro Ágil', rarity: 'common', probability: 20, power: 50 },
-      { name: 'Rastreador Tenaz', rarity: 'common', probability: 20, power: 60 },
-      { name: 'Cazador Joven', rarity: 'common', probability: 18, power: 70 },
-      { name: 'Garra Impaciente', rarity: 'common', probability: 16, power: 80 },
-      { name: 'Cría Feroz', rarity: 'common', probability: 13, power: 90 },
-      { name: 'Explorador Audaz', rarity: 'common', probability: 12, power: 100 },
-      { name: 'Cachorro Alfa', rarity: 'epic', probability: 1, power: 500 }
-    ],
-    // PETIT AQUA (0_1)
-    '0_1': [
-      { name: 'Gota Rápida', rarity: 'common', probability: 20, power: 50 },
-      { name: 'Corriente Ligera', rarity: 'common', probability: 20, power: 60 },
-      { name: 'Burbuja Eficiente', rarity: 'common', probability: 18, power: 70 },
-      { name: 'Chorro Preciso', rarity: 'common', probability: 16, power: 80 },
-      { name: 'Flujo Sereno', rarity: 'common', probability: 13, power: 90 },
-      { name: 'Gota de Rocío', rarity: 'common', probability: 12, power: 100 },
-      { name: 'Corriente de Tsunami', rarity: 'epic', probability: 1, power: 500 }
-    ],
-    // PETIT BIRD (0_2)
-    '0_2': [
-      { name: 'Ala Veloz', rarity: 'common', probability: 20, power: 50 },
-      { name: 'Corriente Ascendente', rarity: 'common', probability: 20, power: 60 },
-      { name: 'Pluma Ligera', rarity: 'common', probability: 18, power: 70 },
-      { name: 'Picotazo Preciso', rarity: 'common', probability: 16, power: 80 },
-      { name: 'Pequeño Raptor', rarity: 'common', probability: 13, power: 90 },
-      { name: 'Polluelo Vigía', rarity: 'common', probability: 12, power: 100 },
-      { name: 'Gorrión Sónico', rarity: 'epic', probability: 1, power: 500 }
-    ],
-    // PETIT BUG (0_3)
-    '0_3': [
-      { name: 'Zángano Obrero', rarity: 'common', probability: 20, power: 50 },
-      { name: 'Hormiga Exploradora', rarity: 'common', probability: 20, power: 60 },
-      { name: 'Pupa Eficiente', rarity: 'common', probability: 18, power: 70 },
-      { name: 'Zumbido Silencioso', rarity: 'common', probability: 16, power: 80 },
-      { name: 'Escarabajo Resiliente', rarity: 'common', probability: 13, power: 90 },
-      { name: 'Larva Protegida', rarity: 'common', probability: 12, power: 100 },
-      { name: 'Zángano Reina', rarity: 'epic', probability: 1, power: 500 }
-    ],
-    // PETIT PLANT (0_4)
-    '0_4': [
-      { name: 'Brote Constante', rarity: 'common', probability: 20, power: 50 },
-      { name: 'Raíz Joven', rarity: 'common', probability: 20, power: 60 },
-      { name: 'Hoja Perenne', rarity: 'common', probability: 18, power: 70 },
-      { name: 'Espina Afilada', rarity: 'common', probability: 16, power: 80 },
-      { name: 'Flujo de Savia', rarity: 'common', probability: 13, power: 90 },
-      { name: 'Semilla Durmiente', rarity: 'common', probability: 12, power: 100 },
-      { name: 'Brote Milenario', rarity: 'epic', probability: 1, power: 500 }
-    ],
-    // PETIT REPTILE (0_5)
-    '0_5': [
-      { name: 'Escama Venenosa', rarity: 'common', probability: 20, power: 50 },
-      { name: 'Gecko Astuto', rarity: 'common', probability: 20, power: 60 },
-      { name: 'Escudo Resbaladizo', rarity: 'common', probability: 18, power: 70 },
-      { name: 'Mordida Rápida', rarity: 'common', probability: 16, power: 80 },
-      { name: 'Sangre Fría', rarity: 'common', probability: 13, power: 90 },
-      { name: 'Cría de Caimán', rarity: 'common', probability: 12, power: 100 },
-      { name: 'Caimán Soberano', rarity: 'epic', probability: 1, power: 500 }
-    ],
-    // PETIT MECH (0_6)
-    '0_6': [
-      { name: 'Nano-Constructor', rarity: 'common', probability: 20, power: 50 },
-      { name: 'Dron de Prospección', rarity: 'common', probability: 20, power: 60 },
-      { name: 'Pequeño Lobo', rarity: 'common', probability: 18, power: 70 },
-      { name: 'Chispa Precisa', rarity: 'common', probability: 16, power: 80 },
-      { name: 'Circuito Estable', rarity: 'common', probability: 13, power: 90 },
-      { name: 'Tornillo de Titanio', rarity: 'common', probability: 12, power: 100 },
-      { name: 'Nano-Constructor Alfa', rarity: 'epic', probability: 1, power: 500 }
-    ],
-    // PETIT DUSK (0_7)
-    '0_7': [
-      { name: 'Susurro Nocturno', rarity: 'common', probability: 20, power: 50 },
-      { name: 'Espía Crepuscular', rarity: 'common', probability: 20, power: 60 },
-      { name: 'Brillo Efímero', rarity: 'common', probability: 18, power: 70 },
-      { name: 'Daga de Sombra', rarity: 'common', probability: 16, power: 80 },
-      { name: 'Penumbra Constante', rarity: 'common', probability: 13, power: 90 },
-      { name: 'Cría del Ocaso', rarity: 'common', probability: 12, power: 100 },
-      { name: 'Sombra Acechante', rarity: 'epic', probability: 1, power: 500 }
-    ],
-  };
-
-  // Si existe mapeo específico, usarlo
-  if (minerNames[key]) {
-    return minerNames[key];
-  }
-  
-  // Fallback por categoría (patrón de rarezas genérico)
+// Mapeo de probabilidades por categoría (patrón genérico)
+// Los nombres vienen de los thumbnails (metadata)
+const getMinerData = (category: GeodeCategory): MinerData[] => {
   switch (category) {
-    case GeodeCategory.PETIT: // 0
+    case GeodeCategory.PETIT:
       return [
-        { name: 'Miner 1', rarity: 'common', probability: 20, power: 50 },
-        { name: 'Miner 2', rarity: 'common', probability: 20, power: 60 },
-        { name: 'Miner 3', rarity: 'common', probability: 18, power: 70 },
-        { name: 'Miner 4', rarity: 'common', probability: 16, power: 80 },
-        { name: 'Miner 5', rarity: 'common', probability: 13, power: 90 },
-        { name: 'Miner 6', rarity: 'common', probability: 12, power: 100 },
-        { name: 'Epic Miner', rarity: 'epic', probability: 1, power: 500 }
+        { name: '', rarity: 'common', probability: 20, power: 50 },      // Índice 0: Común (gris)
+        { name: '', rarity: 'common', probability: 20, power: 60 },      // Índice 1: Común (gris)
+        { name: '', rarity: 'rare', probability: 18, power: 70 },        // Índice 2: Raro (azul claro)
+        { name: '', rarity: 'rare', probability: 16, power: 80 },        // Índice 3: Raro (azul claro)
+        { name: '', rarity: 'very-rare', probability: 13, power: 90 },   // Índice 4: Muy Raro (verde)
+        { name: '', rarity: 'very-rare', probability: 12, power: 100 },  // Índice 5: Muy Raro (verde)
+        { name: '', rarity: 'epic', probability: 1, power: 500 }         // Índice 6: Épico (rojo)
       ];
-      
-    case GeodeCategory.ALTO: // 1
-      // Alto: 2 Comunes + 2 Poco Comunes + 2 Raros + 1 Épico
+    case GeodeCategory.ALTO:
       return [
-        { name: 'Miner 1', rarity: 'common', probability: 20, power: 100 },
-        { name: 'Miner 2', rarity: 'common', probability: 20, power: 110 },
-        { name: 'Miner 3', rarity: 'common', probability: 18, power: 120 },
-        { name: 'Miner 4', rarity: 'common', probability: 16, power: 130 },
-        { name: 'Miner 5', rarity: 'rare', probability: 13, power: 140 },
-        { name: 'Miner 6', rarity: 'rare', probability: 12, power: 150 },
-        { name: 'Epic Miner', rarity: 'epic', probability: 1, power: 750 }
+        { name: '', rarity: 'common', probability: 20, power: 100 },
+        { name: '', rarity: 'common', probability: 20, power: 110 },
+        { name: '', rarity: 'common', probability: 18, power: 120 },
+        { name: '', rarity: 'common', probability: 16, power: 130 },
+        { name: '', rarity: 'rare', probability: 13, power: 140 },
+        { name: '', rarity: 'rare', probability: 12, power: 150 },
+        { name: '', rarity: 'epic', probability: 1, power: 750 }
       ];
-      
-    case GeodeCategory.ANIMAL: // 2
-      // Animal: 2 Poco Comunes + 2 Raros + 2 Ultra Raros + 1 Épico
+    case GeodeCategory.ANIMAL:
+    case GeodeCategory.ULTRAMECH:
       return [
-        { name: 'Miner 1', rarity: 'common', probability: 20, power: 120 },
-        { name: 'Miner 2', rarity: 'common', probability: 20, power: 140 },
-        { name: 'Miner 3', rarity: 'rare', probability: 18, power: 160 },
-        { name: 'Miner 4', rarity: 'rare', probability: 16, power: 180 },
-        { name: 'Miner 5', rarity: 'rare', probability: 13, power: 200 },
-        { name: 'Miner 6', rarity: 'rare', probability: 12, power: 220 },
-        { name: 'Epic Miner', rarity: 'epic', probability: 1, power: 1000 }
+        { name: '', rarity: 'common', probability: 20, power: 120 },
+        { name: '', rarity: 'common', probability: 20, power: 140 },
+        { name: '', rarity: 'rare', probability: 18, power: 160 },
+        { name: '', rarity: 'rare', probability: 16, power: 180 },
+        { name: '', rarity: 'rare', probability: 13, power: 200 },
+        { name: '', rarity: 'rare', probability: 12, power: 220 },
+        { name: '', rarity: 'epic', probability: 1, power: 1000 }
       ];
-      
-    case GeodeCategory.ULTRAMECH: // 3
-      // Ultramech: 2 Poco Comunes + 2 Raros + 2 Ultra Raros + 1 Épico
+    case GeodeCategory.TANQUE:
       return [
-        { name: 'Miner 1', rarity: 'common', probability: 20, power: 120 },
-        { name: 'Miner 2', rarity: 'common', probability: 20, power: 140 },
-        { name: 'Miner 3', rarity: 'rare', probability: 18, power: 160 },
-        { name: 'Miner 4', rarity: 'rare', probability: 16, power: 180 },
-        { name: 'Miner 5', rarity: 'rare', probability: 13, power: 200 },
-        { name: 'Miner 6', rarity: 'rare', probability: 12, power: 220 },
-        { name: 'Epic Miner', rarity: 'epic', probability: 1, power: 1000 }
+        { name: '', rarity: 'rare', probability: 20, power: 150 },
+        { name: '', rarity: 'rare', probability: 20, power: 170 },
+        { name: '', rarity: 'rare', probability: 18, power: 190 },
+        { name: '', rarity: 'rare', probability: 16, power: 210 },
+        { name: '', rarity: 'rare', probability: 13, power: 230 },
+        { name: '', rarity: 'rare', probability: 12, power: 250 },
+        { name: '', rarity: 'legendary', probability: 1, power: 1500 }
       ];
-      
-    case GeodeCategory.TANQUE: // 4
-      // Tanque: 2 Raros + 4 Ultra Raros + 1 Legendario
-      return [
-        { name: 'Miner 1', rarity: 'rare', probability: 20, power: 150 },
-        { name: 'Miner 2', rarity: 'rare', probability: 20, power: 170 },
-        { name: 'Miner 3', rarity: 'rare', probability: 18, power: 190 },
-        { name: 'Miner 4', rarity: 'rare', probability: 16, power: 210 },
-        { name: 'Miner 5', rarity: 'rare', probability: 13, power: 230 },
-        { name: 'Miner 6', rarity: 'rare', probability: 12, power: 250 },
-        { name: 'Legendary Miner', rarity: 'legendary', probability: 1, power: 1500 }
-      ];
-      
     default:
-      // Fallback genérico para tipos no definidos
       return [
-        { name: 'Common 1', rarity: 'common', probability: 20, power: 50 },
-        { name: 'Common 2', rarity: 'common', probability: 20, power: 60 },
-        { name: 'Common 3', rarity: 'common', probability: 18, power: 70 },
-        { name: 'Common 4', rarity: 'common', probability: 16, power: 80 },
-        { name: 'Rare 1', rarity: 'rare', probability: 13, power: 90 },
-        { name: 'Rare 2', rarity: 'rare', probability: 12, power: 100 },
-        { name: 'Epic', rarity: 'epic', probability: 1, power: 500 }
+        { name: '', rarity: 'common', probability: 20, power: 50 },
+        { name: '', rarity: 'common', probability: 20, power: 60 },
+        { name: '', rarity: 'common', probability: 18, power: 70 },
+        { name: '', rarity: 'common', probability: 16, power: 80 },
+        { name: '', rarity: 'rare', probability: 13, power: 90 },
+        { name: '', rarity: 'rare', probability: 12, power: 100 },
+        { name: '', rarity: 'epic', probability: 1, power: 500 }
       ];
   }
 };
 
-// Colores por rareza
+// Colores por rareza (solo visual para ruleta)
 const getRarityColor = (rarity: string): string => {
   const colors: Record<string, string> = {
-    common: 'bg-gray-500',
-    rare: 'bg-purple-500',
-    epic: 'bg-red-500',
-    legendary: 'bg-yellow-500'
+    common: 'bg-gray-500',           // Gris para común
+    rare: 'bg-blue-400',             // Azul claro para raro
+    'very-rare': 'bg-green-500',     // Verde para muy raro
+    epic: 'bg-red-500',              // Rojo para épico
+    legendary: 'bg-yellow-500'       // Amarillo para legendario
   };
   
   return colors[rarity] || 'bg-gray-500';
 };
 
 
-export function HatchRoulette({ category, axieClass, isVisible, onComplete, loopUntilConfirm = false, isConfirmed = false }: HatchRouletteProps) {
+export function HatchRoulette({ category, axieClass, isVisible, onComplete, loopUntilConfirm = false, isConfirmed = false, selectedMinerIndex }: HatchRouletteProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<gsap.core.Tween | null>(null);
   const hasAppliedRNG = useRef<boolean>(false); // Para evitar doble ejecución del RNG
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null); // Thumbnail seleccionado
   const thumbnails = getThumbnails(category, axieClass);
-  const minerData = getMinerData(category, axieClass);
+  const minerData = getMinerData(category);
   
   // Extraer nombres reales de los thumbnails (sin -thumbnail.webp o .png)
   const realMinerNames = thumbnails.map(path => {
     const fileName = path.split('/').pop() || '';
-    // Quitar -thumbnail.webp, .png, .webp (case insensitive) y reemplazar _ por espacios
+    // Quitar -thumbnail.webp, .png, .webp (case insensitive)
+    // MANTENER guiones bajos (snake_case)
     return fileName
       .replace(/-thumbnail\.webp$/i, '') // Case insensitive -thumbnail.webp
       .replace(/\.png$/i, '') // Quitar .png
-      .replace(/\.webp$/i, '') // Quitar .webp
-      .replace(/_/g, ' ');
+      .replace(/\.webp$/i, ''); // Quitar .webp
   });
 
   useEffect(() => {
@@ -338,33 +227,44 @@ export function HatchRoulette({ category, axieClass, isVisible, onComplete, loop
     if (!animationRef.current || !containerRef.current) return;
     if (hasAppliedRNG.current) return;
 
-    logger.info('Contrato confirmado - aplicando RNG');
+    logger.info('Contrato confirmado - determinando miner seleccionado');
     hasAppliedRNG.current = true;
     
     // Detener animación placeholder
     animationRef.current.kill();
     animationRef.current = null;
 
-    // Sistema RNG basado en probabilidades del manual
-    const random = Math.random() * 100;
-    let cumulative = 0;
-    let selectedIndex = 0;
+    // ✅ Usar índice REAL del contrato si está disponible
+    let selectedIndex: number;
     
-    for (let i = 0; i < minerData.length; i++) {
-      cumulative += minerData[i].probability;
-      if (random < cumulative) {
-        selectedIndex = i;
-        break;
+    if (selectedMinerIndex !== undefined && selectedMinerIndex !== null) {
+      // Usar el índice que vino del contrato (convertir a number por si viene como BigInt)
+      selectedIndex = Number(selectedMinerIndex);
+      logger.info('Usando minerIndex REAL del contrato', { selectedIndex });
+    } else {
+      // Fallback: RNG frontend (solo para testing sin contrato)
+      const random = Math.random() * 100;
+      let cumulative = 0;
+      selectedIndex = 0;
+      
+      for (let i = 0; i < minerData.length; i++) {
+        cumulative += minerData[i].probability;
+        if (random < cumulative) {
+          selectedIndex = i;
+          break;
+        }
       }
+      logger.warn('Usando RNG frontend (fallback) - no hay selectedMinerIndex del contrato', { selectedIndex });
     }
     
     const selectedMiner = minerData[selectedIndex];
     const realMinerName = realMinerNames[selectedIndex] || selectedMiner.name;
-    logger.info('Minero seleccionado por RNG', {
+    logger.info('Miner seleccionado para animación', {
       name: realMinerName,
       rarity: selectedMiner.rarity,
       power: selectedMiner.power,
-      index: selectedIndex
+      index: selectedIndex,
+      source: selectedMinerIndex !== undefined ? 'contract' : 'frontend-rng'
     });
 
     // Calcular posición final centrada
@@ -400,6 +300,9 @@ export function HatchRoulette({ category, axieClass, isVisible, onComplete, loop
       finalPosition
     });
     
+    // ✅ Actualizar estado React ANTES de animación para sincronizar resaltado visual
+    setSelectedIndex(selectedIndex);
+    
     // Animación de desaceleración: empieza rápido (1s) y desacelera gradualmente
     animationRef.current = gsap.to(containerRef.current, {
       x: -finalPosition,
@@ -418,6 +321,8 @@ export function HatchRoulette({ category, axieClass, isVisible, onComplete, loop
             power: selectedMiner.power,
             efficiency: 100,
             category,
+            minerType: axieClass, // AxieClass es el minerType
+            minerIndex: selectedIndex,
             axieClass,
             videoPath: '',
           });

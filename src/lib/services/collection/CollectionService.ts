@@ -16,7 +16,7 @@ import {
   PREDEFINED_SETS,
 } from '@/lib/contracts/interfaces/ICollectionContract';
 import { MINER_TYPE_NAMES, CATEGORY_NAMES } from '@/lib/contracts/interfaces/IRecipeRegistry';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('CollectionService');
 

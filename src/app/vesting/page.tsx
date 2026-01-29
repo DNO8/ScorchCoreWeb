@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
+import { useWallet } from '@/lib/hooks/user/useWallet';
 import { Loading } from '@/components/ui';
 import { VestingDashboard } from '@/components/vesting';
 

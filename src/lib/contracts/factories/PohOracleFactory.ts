@@ -9,7 +9,7 @@ import type { Signer, Provider } from 'ethers';
 import type { IPohContract, VerificationData } from '../interfaces/IPohContract';
 import type { TransactionResult, ContractStatus } from '../interfaces/IBlockchainContract';
 import { CONTRACT_ABIS } from '@/lib/abis';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('PohOracleFactory');
 

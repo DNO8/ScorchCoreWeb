@@ -10,7 +10,7 @@ import type { Address } from 'viem';
 import { CYCLEMANAGER_ABI } from '@/lib/abis/mining.abis';
 import type { ICycleContract, MiningCycle, CycleDuration } from '../interfaces/ICycleContract';
 import type { TransactionResult } from '../interfaces/IBlockchainContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const logger = createServiceLogger('CycleManagerFactory');
 

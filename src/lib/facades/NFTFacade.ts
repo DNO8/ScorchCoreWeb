@@ -10,7 +10,7 @@
 
 import type { Address } from 'viem';
 import type { ContractManager } from '@/lib/contracts/ContractManager';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import type { CoreMiner, MinerType } from '@/types/game';
 
 const logger = createServiceLogger('NFTFacade');
@@ -29,7 +29,7 @@ export interface CoreMinerNFT {
   minerIndex: number;      // 0-6: índice específico del miner
   
   // Assets locales
-  videoUrl?: string;       // Ruta al video local: /images/miners/PETIT/PETIT AQUA/GOTA RAPIDA.mp4
+  videoUrl?: string;       // Ruta al video local: /assets/miners/PETIT/PETIT AQUA/GOTA RAPIDA.mp4
   
   // Stats de minería
   miningPower: number;
@@ -166,19 +166,21 @@ export class NFTFacade {
       // Usar datos locales en lugar de IPFS
       const { 
         getLocalMinerName, 
-        getLocalMinerVideo,
+        getLocalMinerVideo, 
         getLocalMinerType 
-      } = await import('@/lib/utils/localMinerData');
+      } = await import('@/lib/utils/data/localMinerData');
+      
+      const { getMinerPower } = await import('@/lib/services/LocalMetadataService');
       
       // Extraer datos del contrato
       const category = Number(minerData.category);
       const minerType = Number(minerData.minerType);
       const minerIndex = Number(minerData.minerIndex);
-      const power = Number(minerData.power);
       
-      // Generar nombre y video desde datos locales
-      const realMinerName = getLocalMinerName(category, minerType, minerIndex);
-      const videoUrl = getLocalMinerVideo(category, minerType, minerIndex);
+      // Generar nombre, video y poder desde metadata local
+      const realMinerName = await getLocalMinerName(category, minerType, minerIndex);
+      const videoUrl = await getLocalMinerVideo(category, minerType, minerIndex);
+      const power = await getMinerPower(category, minerType, minerIndex); // ✅ Poder real desde metadata
       const typeString = getLocalMinerType(minerType);
 
       logger.info('Miner data loaded', {
@@ -205,7 +207,7 @@ export class NFTFacade {
         videoUrl,
         
         // Stats
-        miningPower: power,
+        miningPower: power, // ✅ Ahora viene de metadata JSON
         efficiency: 100,
         
         // Estado

@@ -10,7 +10,7 @@
 import type { Address } from 'viem';
 import { ContractManager } from '@/lib/contracts/ContractManager';
 import { BaseMiningService } from '@/lib/services/base/BaseMiningService';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import { TokenService } from '../token/TokenService';
 import { TOKEN_ADDRESSES } from '@/lib/config/tokens';
 import { BASE_EMISSION_RATE } from '@/lib/constants/mining';

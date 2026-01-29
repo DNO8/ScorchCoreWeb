@@ -18,7 +18,7 @@ import {
   getTrustScoreLevelName,
   getTrustScoreLevelColor 
 } from '@/lib/contracts/interfaces/ITrustScoreContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('TrustScoreService');
 

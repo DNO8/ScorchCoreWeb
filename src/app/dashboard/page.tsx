@@ -2,24 +2,24 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
-import { useUserData } from '@/lib/hooks/useUserData';
-import { useMetadataService } from '@/lib/hooks/useMetadataService';
+import { useWallet } from '@/lib/hooks/user/useWallet';
+import { useUserData } from '@/lib/hooks/user/useUserData';
+import { useMetadataService } from '@/lib/hooks/services/useMetadataService';
 import { useCycleManager, usefCoreBalance } from '@/lib/hooks';
 import { Card, Button, Badge, Loading } from '@/components/ui';
-import { getMinerVideoUrl } from '@/lib/utils/minerNames';
+import { getMinerVideoUrl } from '@/lib/utils/data/minerNames';
 import { MinerLockedIndicator } from '@/components/cycle';
 import { fCoreBalanceCard as FCoreBalanceCard, PohVerificationBanner, fCoreExplanationModal as FCoreExplanationModal } from '@/components/fcore';
 import { AxieCard } from '@/components/axie/AxieCard';
 import { MinerStatsHistoryCard, MinerPerformanceChart, MinerComparisonTable } from '@/components/minerstats';
-import { useMinerStatsHistory, useMinerComparison } from '@/lib/hooks/useMinerStatsHistory';
-import { useMinerActions } from '@/lib/hooks/useMinerActions';
+import { useMinerStatsHistory, useMinerComparison } from '@/lib/hooks/mining/useMinerStatsHistory';
+import { useMinerActions } from '@/lib/hooks/mining/useMinerActions';
 import { MinerConfigModal } from '@/components/miner/MinerConfigModal';
 import { CycleDuration } from '@/lib/contracts/interfaces/ICycleContract';
 import { TokenPriceCard } from '@/components/price';
 import { CollectionProgressCard } from '@/components/collection';
 import Link from 'next/link';
-import { useAxies } from '@/lib/hooks/useAxies';
+import { useAxies } from '@/lib/hooks/nfts/useAxies';
 import { Toast, useToast } from '@/components/ui';
 
 // Componente separado para Stats Tab (evita hooks condicionales)

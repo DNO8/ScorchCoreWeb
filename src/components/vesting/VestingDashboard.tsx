@@ -2,7 +2,7 @@
 
 import { RefreshCw, Info, AlertTriangle } from 'lucide-react';
 import { Button, Loading, Card } from '@/components/ui';
-import { useVesting } from '@/lib/hooks/useVesting';
+import { useVesting } from '@/lib/hooks/economy/useVesting';
 import { VestingCard } from './VestingCard';
 import { VestingStatsCard } from './VestingStatsCard';
 import { useToast } from '@/components/ui';

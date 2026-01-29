@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { GeodeCategory, AxieClass } from '@/lib/constants/geodes';
 import { Modal, Button } from '@/components/ui';
 import { GeodeVideo } from '@/components/GeodeVideo';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('ForgeAnimationPanel');
 

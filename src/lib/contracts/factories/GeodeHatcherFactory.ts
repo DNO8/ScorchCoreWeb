@@ -7,7 +7,7 @@
 
 import { Contract, Provider, Signer } from 'ethers';
 import { GEODE_HATCHER_ABI } from '@/lib/abis/GeodeHatcher';
-import { createRateLimitedContract } from '@/lib/utils/RateLimitedContract';
+import { createRateLimitedContract } from '@/lib/utils/network/RateLimitedContract';
 import type { IGeodeHatcher, HatchResult } from '../interfaces/IGeodeHatcher';
 
 /**
@@ -60,11 +60,12 @@ class GeodeHatcherContract implements IGeodeHatcher {
     return {
       success: receipt.status === 1,
       minerId: event?.args?.minerId || BigInt(0),
-      category: event?.args?.category || 0,
-      minerType: event?.args?.minerType || 0,
-      minerIndex: event?.args?.minerIndex || 0,
+      // ✅ Convertir explícitamente a Number para evitar que vengan como strings
+      category: Number(event?.args?.category || 0),
+      minerType: Number(event?.args?.minerType || 0),
+      minerIndex: Number(event?.args?.minerIndex || 0),
       isCritical: event?.args?.isCritical || false,
-      finalPower: event?.args?.finalPower || 0,
+      finalPower: Number(event?.args?.finalPower || 0),
       transaction: {
         hash: tx.hash,
         success: receipt.status === 1,

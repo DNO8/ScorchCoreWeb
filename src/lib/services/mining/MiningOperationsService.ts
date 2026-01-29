@@ -10,7 +10,7 @@
 import type { Address } from 'viem';
 import { ContractManager } from '@/lib/contracts/ContractManager';
 import { BaseMiningService } from '@/lib/services/base/BaseMiningService';
-import { logger } from '@/lib/utils/logger';
+import { logger } from '@/lib/utils/logging/logger';
 import { withCriticalError, withSafeRead } from '@/lib/utils';
 import type { MiningTransactionResult, ClaimResult } from './types';
 

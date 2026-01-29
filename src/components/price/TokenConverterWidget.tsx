@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, Button } from '@/components/ui';
-import { usePriceOracle } from '@/lib/hooks/usePriceOracle';
+import { usePriceOracle } from '@/lib/hooks/economy/usePriceOracle';
 import { parseUnits, formatUnits } from 'ethers';
 
 export function TokenConverterWidget() {

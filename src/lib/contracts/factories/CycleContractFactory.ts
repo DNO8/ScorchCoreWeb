@@ -16,7 +16,7 @@ import type {
 } from '../interfaces/ICycleContract';
 import type { TransactionResult } from '../interfaces/IBlockchainContract';
 import { CONTRACT_ABIS } from '@/lib/abis';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('CycleContractFactory');
 

@@ -9,7 +9,7 @@
 import type { Address } from 'viem';
 import type { ContractManager } from '@/lib/contracts/ContractManager';
 import type { VestingSchedule } from '@/lib/contracts/interfaces/IEconomyContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('VestingService');
 

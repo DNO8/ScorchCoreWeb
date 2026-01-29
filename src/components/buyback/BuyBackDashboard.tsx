@@ -2,7 +2,7 @@
 
 import { RefreshCw, TrendingDown, Info } from 'lucide-react';
 import { Button, Loading, Card } from '@/components/ui';
-import { useBuyBack } from '@/lib/hooks/useBuyBack';
+import { useBuyBack } from '@/lib/hooks/economy/useBuyBack';
 import { BuyBackReservesCard } from './BuyBackReservesCard';
 import { BuyBackStatsTable } from './BuyBackStatsTable';
 

@@ -10,7 +10,7 @@ import type { Address } from 'viem';
 import { TRUSTSCOREMANAGER_ABI } from '@/lib/abis/antibot.abis';
 import type { ITrustScoreContract, TrustScoreData } from '../interfaces/ITrustScoreContract';
 import type { TransactionResult } from '../interfaces/IBlockchainContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const logger = createServiceLogger('TrustScoreManagerFactory');
 

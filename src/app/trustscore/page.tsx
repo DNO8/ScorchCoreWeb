@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
-import { useTrustScore } from '@/lib/hooks/useTrustScore';
+import { useWallet } from '@/lib/hooks/user/useWallet';
+import { useTrustScore } from '@/lib/hooks/user/useTrustScore';
 import { Card, Button, Badge, Loading } from '@/components/ui';
 import { TrustScoreBadge } from '@/components/trustscore';
 import { Award, TrendingUp, Shield, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';

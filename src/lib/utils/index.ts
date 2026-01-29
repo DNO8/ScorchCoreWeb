@@ -5,13 +5,13 @@
  */
 
 // NFT utilities
-export * from './nft';
+export * from './nft/nft';
 
 // Logger
-export * from './logger';
+export * from './logging/logger';
 
 // Miner names
-export { getMinerName } from './minerNames';
+export { getMinerNameFromMetadata } from './data/minerNames';
 
 // Retry logic
 export {
@@ -20,7 +20,7 @@ export {
   retryBatch,
   isRetryableBlockchainError,
   type RetryOptions,
-} from './retry';
+} from './network/retry';
 
 // Error handling
 export {
@@ -29,6 +29,6 @@ export {
   withSafeRead,
   withErrorLogging,
   type ErrorHandlerOptions,
-} from './errorHandler';
+} from './logging/errorHandler';
 
-export type { LogContext } from './logger';
+export type { LogContext } from './logging/logger';

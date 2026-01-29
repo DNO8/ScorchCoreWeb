@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, TrendingUp, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { CYCLE_DURATION_NAMES, type ActiveCycle } from '@/lib/services/cycle';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import { Toast, useToast } from '@/components/ui';
 
 const log = createServiceLogger('ActiveCycleCard');

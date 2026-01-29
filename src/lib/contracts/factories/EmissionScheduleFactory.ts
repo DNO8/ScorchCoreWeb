@@ -11,7 +11,7 @@ import { ethers } from 'ethers';
 import type { Address } from 'viem';
 import { EMISSIONSCHEDULE_ABI } from '@/lib/abis/core.abis';
 import type { IEmissionSchedule } from '../interfaces/IEconomyContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const logger = createServiceLogger('EmissionScheduleFactory');
 

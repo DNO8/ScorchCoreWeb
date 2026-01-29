@@ -4,7 +4,7 @@
  */
 
 import type { Address } from 'viem';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('ContractConfig');
 
@@ -36,8 +36,22 @@ export interface ContractAddresses {
   // Core Contracts
   scorchHeartTransmuter: Address;
   axsTreasuryVault: Address;
-  miningScheduler?: Address;
+  
+  // Mining System
+  miningPool?: Address;
+  rewardsCalculator?: Address;
+  cycleManager?: Address;
+  emissionSchedule?: Address;
+  
+  // Staking Managers
   axieStakingManager?: Address;
+  geodeStakingManager?: Address;
+  coreMinerStakingManager?: Address;
+  
+  // Economy & Gaming
+  scholarshipManager?: Address;
+  minigameManager?: Address;
+  pvpArena?: Address;
   
   // Faucets (solo testnet)
   tokenFaucet?: Address;
@@ -74,8 +88,22 @@ const MAINNET_CONTRACTS: ContractAddresses = {
   // ScorchCore Contracts (actualizar después del deploy)
   scorchHeartTransmuter: '0x0000000000000000000000000000000000000000',
   axsTreasuryVault: '0x0000000000000000000000000000000000000000',
-  miningScheduler: '0x0000000000000000000000000000000000000000',
+  
+  // Mining System
+  miningPool: '0x0000000000000000000000000000000000000000',
+  rewardsCalculator: '0x0000000000000000000000000000000000000000',
+  cycleManager: '0x0000000000000000000000000000000000000000',
+  emissionSchedule: '0x0000000000000000000000000000000000000000',
+  
+  // Staking Managers
   axieStakingManager: '0x0000000000000000000000000000000000000000',
+  geodeStakingManager: '0x0000000000000000000000000000000000000000',
+  coreMinerStakingManager: '0x0000000000000000000000000000000000000000',
+  
+  // Economy & Gaming
+  scholarshipManager: '0x0000000000000000000000000000000000000000',
+  minigameManager: '0x0000000000000000000000000000000000000000',
+  pvpArena: '0x0000000000000000000000000000000000000000',
 };
 
 // Ronin Testnet Addresses (2021)
@@ -109,11 +137,25 @@ export const TESTNET_CONTRACTS: ContractAddresses = {
   geodeNFT: '0x4581b630DC14905a2C13B21654610a547733A287', // GeodeNFT ✅ VERIFIED
   coreMinerNFT: '0xa105F44F96A733C1eADEecDd9ade3f03Ce11B79b', // CoreMinerNFT ✅ VERIFIED
   
-  // Core Contracts (NUEVO DEPLOYMENT - Phase 2A completo)
+  // Core Contracts
   scorchHeartTransmuter: '0x2974bb1607DDBEc7eC7013562e0D0F45FE6732B1', // ForgeFactory ✅ VERIFIED
   axsTreasuryVault: '0x0000000000000000000000000000000000000000', // TODO: No deployed yet
-  miningScheduler: '0x6FAD12Be7CbaB1F559B39A84019a29239B17863E', // MiningPool ✅ VERIFIED
+  
+  // Mining System (RE-DEPLOYED 26-Jan-2026)
+  miningPool: '0xCe168E28AED62EcF22A09137E7bbd40c56060A3C', // MiningPool v2 ✅ NEW
+  rewardsCalculator: '0x11AFc7BFfCD4B4cDe692f24777dDB4b3C312DCE8', // RewardsCalculator v2 ✅ NEW
+  cycleManager: '0x516463ceD938697B53EE46df84899f019D89a341', // CycleManager ✅ VERIFIED
+  emissionSchedule: '0x0d9C4Ad5509f457959c46bC39726b2B2723D57b6', // EmissionSchedule ✅ VERIFIED
+  
+  // Staking Managers (DEPLOYED 26-Jan-2026)
   axieStakingManager: '0x0f00cce40b8aA690926daCDbDA5663b2bd39c2FB', // AxieStakingManager ✅ VERIFIED
+  geodeStakingManager: '0x5d863C0Ce30055EB9F9c941Ea44B2e58AE9dB0BB', // GeodeStakingManager ✅ NEW
+  coreMinerStakingManager: '0xAe5B141B160500A291b6db7cbC6Cf57CD932A4FB', // CoreMinerStakingManager ✅ NEW
+  
+  // Economy & Gaming (DEPLOYED 26-Jan-2026)
+  scholarshipManager: '0x66da21090139EEC550DBa64E2dA9EAc9eECBD3c6', // ScholarshipManager ✅ NEW
+  minigameManager: '0x0984733Ba837CaB92d26C634FffcAe6a21A08925', // MinigameManager ✅ NEW
+  pvpArena: '0x2E5e9e89b4a40BAf1A0545e368fa5E8044647c93', // PvPArena ✅ NEW
 };
 
 /**
@@ -153,13 +195,13 @@ export function getValidContracts(chainId: number): Partial<ContractAddresses> {
   for (const [key, value] of Object.entries(addresses)) {
     // mementos es un objeto, manejarlo especialmente
     if (key === 'mementos' && typeof value === 'object') {
-      validAddresses[key] = value;
+      (validAddresses as any)[key] = value;
     } else if (typeof value === 'string' && isValidAddress(value as Address)) {
-      validAddresses[key] = value;
+      (validAddresses as any)[key] = value;
     }
   }
   
-  return validAddresses as Partial<ContractAddresses>;
+  return validAddresses;
 }
 
 /**

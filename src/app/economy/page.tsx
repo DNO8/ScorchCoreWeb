@@ -3,11 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
+import { useWallet } from '@/lib/hooks/user/useWallet';
 import { HalvingCountdown } from '@/components/emission/HalvingCountdown';
 import { BuyBackDashboard } from '@/components/buyback/BuyBackDashboard';
 import { TokenPriceCard, TokenConverterWidget } from '@/components/price';
-import { useEmissionSchedule } from '@/lib/hooks/useEmissionSchedule';
+import { useEmissionSchedule } from '@/lib/hooks/economy/useEmissionSchedule';
 import { Loading } from '@/components/ui';
 import { EmissionScheduleCard } from '@/components/emission';
 

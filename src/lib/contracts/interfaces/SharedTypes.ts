@@ -18,9 +18,8 @@ export interface HatchResult {
   category: number;
   minerType: number;
   minerIndex: number;
-  power: bigint;
-  efficiency: bigint;
   isCritical: boolean;
+  finalPower: number;
   transaction: TransactionResult;
 }
 

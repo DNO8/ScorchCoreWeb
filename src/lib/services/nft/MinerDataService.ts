@@ -12,7 +12,7 @@
 
 import type { Address } from 'viem';
 import { ContractManager } from '@/lib/contracts/ContractManager';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import type { MinerChainData, EnrichedMinerData, MinerEnrichmentData } from './types';
 
 const log = createServiceLogger('MinerDataService');

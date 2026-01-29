@@ -13,7 +13,7 @@ import type {
   IRecipeRegistry, 
   TransactionResult,
 } from '../interfaces/IRecipeRegistry';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const logger = createServiceLogger('RecipeRegistryFactory');
 

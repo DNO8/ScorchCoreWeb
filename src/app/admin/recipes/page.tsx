@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
-import { useRecipes, useAdminRole } from '@/lib/hooks/useRecipes';
+import { useWallet } from '@/lib/hooks/user/useWallet';
+import { useRecipes, useAdminRole } from '@/lib/hooks/economy/useRecipes';
 import { Loading, Button, Badge } from '@/components/ui';
 import { RecipeManagerTable } from '@/components/recipe/RecipeManagerTable';
 import { AddRecipeModal } from '@/components/recipe/AddRecipeModal';
@@ -97,7 +97,7 @@ export default function RecipesAdminPage() {
                 <Badge variant="default" className="text-xs">
                   Common: {stats.byCategory[0]}
                 </Badge>
-                <Badge variant="primary" className="text-xs">
+                <Badge variant="info" className="text-xs">
                   Rare: {stats.byCategory[1]}
                 </Badge>
                 <Badge variant="success" className="text-xs">
@@ -121,7 +121,7 @@ export default function RecipesAdminPage() {
                 recipe.category,
                 recipe.minerType,
                 recipe.minerIndex,
-                !recipe.isActive
+                true
               );
             }}
             onRefresh={refresh}

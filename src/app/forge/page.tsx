@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
-import { useMementoBalances } from '@/lib/hooks/useMementoBalances';
-import { useContracts } from '@/lib/hooks/useContracts';
-import { useContractManager } from '@/lib/hooks/useContractManager';
-import { useTrustScore, useCanAccessCategory } from '@/lib/hooks/useTrustScore';
-import { useAxies } from '@/lib/hooks/useAxies';
+import { useWallet } from '@/lib/hooks/user/useWallet';
+import { useMementoBalances } from '@/lib/hooks/economy/useMementoBalances';
+import { useContracts } from '@/lib/hooks/contracts/useContracts';
+import { useContractManager } from '@/lib/hooks/contracts/useContractManager';
+import { useTrustScore, useCanAccessCategory } from '@/lib/hooks/user/useTrustScore';
+import { useAxies } from '@/lib/hooks/nfts/useAxies';
+// import { useCategorySupply } from '@/hooks/useForgeSupply'; // Deshabilitado temporalmente
 import { Card, Button, Badge, Loading, Toast, useToast } from '@/components/ui';
 import { GeodeVideo } from '@/components/GeodeVideo';
 import { TrustScoreBadge, TrustScoreRequirementTooltip } from '@/components/trustscore';
@@ -16,7 +17,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAccount, useWalletClient } from 'wagmi';
 import { ForgeFacade } from '@/lib/services/forge/ForgeFacade';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import type { MaterialInput } from '@/lib/contracts/interfaces/IForgeContract';
 import {
   GeodeCategory,
@@ -72,17 +73,23 @@ export default function ForgePage() {
   // Estados
   const [selectedCategory, setSelectedCategory] = useState<GeodeCategory | undefined>(undefined);
   const [selectedClass, setSelectedClass] = useState<AxieClass | undefined>(undefined);
+  
+  // Supply real de la categoría seleccionada (después de declarar selectedCategory)
+  // Auto-refresh desactivado para evitar loops si no hay provider
+  // const { supplyInfo, refetch: refetchSupply } = useCategorySupply(selectedCategory, {
+  //   autoRefresh: false, // Desactivado hasta que el provider esté estable
+  //   refreshInterval: 15000,
+  // });
   const [mementosToUse, setMementosToUse] = useState<number>(0);
   const [forgeStep, setForgeStep] = useState<'select' | 'approve' | 'forge' | 'success'>('select');
   const [isForging, setIsForging] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [forgedGeodeId, setForgedGeodeId] = useState<bigint | null>(null);
   const [forgeFailed, setForgeFailed] = useState(false);
-  const [forgeAnimationStage, setForgeAnimationStage] = useState<'stage1' | 'stage2' | 'stage3' | 'success' | 'fail'>('stage1');
+  const [forgeAnimationStage, setForgeAnimationStage] = useState<'stage1' | 'stage2' | 'stage3' | 'stage4' | 'success' | 'fail'>('stage1');
   const approvedMementosRef = useRef<number>(0);
 
   // Hook para manejar stages de animación
-  // TODO: Implementar useForgeStage completo
   const forgeStage = {
     stage: 'idle' as const,
     currentStage: forgeAnimationStage,
@@ -139,6 +146,24 @@ export default function ForgePage() {
       return () => clearTimeout(timer);
     }
   }, [isConnected, router]);
+
+  // Cambiar stage de animación cuando se selecciona categoría
+  useEffect(() => {
+    if (selectedCategory !== undefined && selectedClass === undefined) {
+      setForgeAnimationStage('stage2'); // Usuario seleccionó categoría, mostrar video stage2
+      logger.info('Stage cambiado a 2 - categoría seleccionada', { selectedCategory });
+    } else if (selectedCategory === undefined) {
+      setForgeAnimationStage('stage1'); // Reset a stage1 si no hay categoría
+    }
+  }, [selectedCategory]);
+
+  // Cambiar stage de animación cuando se selecciona clase
+  useEffect(() => {
+    if (selectedCategory !== undefined && selectedClass !== undefined) {
+      setForgeAnimationStage('stage3');
+      logger.info('Stage cambiado a 3', { selectedClass });
+    }
+  }, [selectedCategory, selectedClass]);
 
   // Resetear mementos al cambiar geoda
   useEffect(() => {
@@ -292,13 +317,14 @@ export default function ForgePage() {
       if (result.success && result.geodeId) {
         setForgedGeodeId(result.geodeId);
         setForgeStep('success');
-        setForgeAnimationStage('success'); // Activar animación de éxito
+        setForgeAnimationStage('success'); // Activar modal de éxito (sin video de fondo)
         setForgeFailed(false);
         showSuccess(`¡Geoda ${geodeName} forjada con éxito! Token ID: ${result.geodeId}`);
         logger.info('Forja exitosa', { 
-          geodeId: result.geodeId.toString(),
-          isCritical: result.isCritical,
-          isRare: result.isRare 
+          geodeId: result.geodeId?.toString(), 
+          category: selectedCategory, 
+          class: selectedClass,
+          txHash: result.transaction.hash 
         });
         
         // Refrescar balances de mementos en la UI
@@ -306,7 +332,7 @@ export default function ForgePage() {
       } else {
         // La forja falló por RNG
         setForgeFailed(true);
-        setForgeAnimationStage('fail'); // Activar animación de fallo
+        setForgeAnimationStage('fail'); // Mostrar video de fallo
         showError(`La forja falló debido al RNG (${currentFailureChance}% de probabilidad). Los tokens fueron consumidos.`);
         logger.warn('Forja fallida por RNG', { recipeId, failureChance: currentFailureChance });
       }
@@ -625,9 +651,11 @@ export default function ForgePage() {
                   size="lg"
                   className="w-full"
                   onClick={handleApprove}
-                  disabled={selectedCategory === undefined || selectedClass === undefined || !hasAccessToCategory}
+                  disabled={selectedCategory === undefined || selectedClass === undefined || !hasAccessToCategory || isApproving}
                 >
-                  {!hasAccessToCategory
+                  {isApproving
+                    ? 'Aprobando...'
+                    : !hasAccessToCategory
                     ? '🔒 Requiere Mayor Trust Score'
                     : selectedCategory === undefined 
                     ? 'Selecciona una categoría' 

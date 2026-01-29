@@ -33,12 +33,20 @@ export const CONTRACT_ADDRESSES = {
   SetRegistry: '0x63685c0948274114d391c409483aE3F228B25a53',
   UserCollectionTracker: '0x42FC08E6bAba091A11D379258C2B257FE91C4434',
   BonusCalculator: '0x0a517d72D97d7FcB217a4738Ff8E558137f97bD9',
-  RewardsCalculator: '0xac14583d4C7E31809B998bc9f3837209e7784d41',
+  RewardsCalculator: '0x11AFc7BFfCD4B4cDe692f24777dDB4b3C312DCE8', // ✅ RE-DEPLOYED 26-Jan-2026
   CycleManager: '0x516463ceD938697B53EE46df84899f019D89a341',
-  MiningPool: '0x6FAD12Be7CbaB1F559B39A84019a29239B17863E',
+  MiningPool: '0xCe168E28AED62EcF22A09137E7bbd40c56060A3C', // ✅ RE-DEPLOYED 26-Jan-2026
   
-  // Integrations
+  // Integrations & Staking
   AxieIntegration: '0xf177F589c95162841C9FBFA342Ec6212fAdB1887',
+  AxieStakingManager: '0x0f00cce40b8aA690926daCDbDA5663b2bd39c2FB',
+  GeodeStakingManager: '0x5d863C0Ce30055EB9F9c941Ea44B2e58AE9dB0BB', // ✅ NEW 26-Jan-2026
+  CoreMinerStakingManager: '0xAe5B141B160500A291b6db7cbC6Cf57CD932A4FB', // ✅ NEW 26-Jan-2026
+  
+  // Economy & Gaming (Phase 3 - 26-Jan-2026)
+  ScholarshipManager: '0x66da21090139EEC550DBa64E2dA9EAc9eECBD3c6', // ✅ NEW
+  MinigameManager: '0x0984733Ba837CaB92d26C634FffcAe6a21A08925', // ✅ NEW
+  PvPArena: '0x2E5e9e89b4a40BAf1A0545e368fa5E8044647c93', // ✅ NEW
   
   // Memento System
   MementoToken: '0xfa3Ab001DA96e9D97574cec97D0e1A1eFc53CA25', // v2 Multi-Type (IDs 0-8)
@@ -58,7 +66,6 @@ export const CONTRACT_ADDRESSES = {
   BuyBackFund: '0xA5911Bd91eEc413299e942a73C875Df7b75c92F1',
   RoyaltyManager: '0x1b360dCa7E14E3bb9d42d74cE3A923a4c6FC4C2E',
   TrustScoreManager: '0xc91cf64e7405730483C2EB38AaeBE353aC8dF041',
-  AxieStakingManager: '0x0f00cce40b8aA690926daCDbDA5663b2bd39c2FB',
   
   // Forge System (Phase 2C - 2026-01-23)
   RecipeRegistry: '0x0F429C4eaD95c7c5b09235b30986f0cD763199F4',

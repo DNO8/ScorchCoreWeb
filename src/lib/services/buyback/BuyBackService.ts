@@ -8,7 +8,7 @@
 
 import type { ContractManager } from '@/lib/contracts/ContractManager';
 import type { BuyBackInfo } from '@/lib/contracts/interfaces/IEconomyContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('BuyBackService');
 

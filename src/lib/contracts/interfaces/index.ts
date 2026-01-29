@@ -80,7 +80,16 @@ export type {
 export { PREDEFINED_SETS } from './ICollectionContract';
 
 // GeodeHatcher
-export type { IGeodeHatcher, HatchResult } from './IGeodeHatcher';
+export type { IGeodeHatcher } from './IGeodeHatcher';
+
+// Staking Managers (Phase 3 - 26-Jan-2026)
+export type { IGeodeStakingManager } from './IGeodeStakingManager';
+export type { ICoreMinerStakingManager } from './ICoreMinerStakingManager';
+
+// Economy & Gaming (Phase 3 - 26-Jan-2026)
+export type { IScholarshipManager, ScholarshipOffer } from './IScholarshipManager';
+export type { IMinigameManager, MinigameResult, MinigameConfig } from './IMinigameManager';
+export type { IPvPArena, RaidInfo, DefenseStats, AttackStats } from './IPvPArena';
 
 /**
  * Verifica si un contrato implementa IForgeContract

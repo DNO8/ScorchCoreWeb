@@ -9,7 +9,7 @@
 
 import type { ContractManager } from '@/lib/contracts/ContractManager';
 import type { PriceInfoUI } from '@/lib/contracts/interfaces/IEconomyContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import { formatUnits } from 'ethers';
 
 const log = createServiceLogger('PriceOracleService');

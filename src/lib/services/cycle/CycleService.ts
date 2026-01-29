@@ -8,7 +8,7 @@
 
 import type { Address } from 'viem';
 import { ContractManager } from '@/lib/contracts/ContractManager';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import { CycleDuration } from '@/lib/contracts/interfaces/ICycleContract';
 import { CYCLE_DURATION_NAMES } from './types';
 import type {

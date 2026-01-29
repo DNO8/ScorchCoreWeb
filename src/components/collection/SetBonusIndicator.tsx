@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui';
-import { useCollectionBonus } from '@/lib/hooks/useCollectionBonus';
+import { useCollectionBonus } from '@/lib/hooks/economy/useCollectionBonus';
 
 export interface SetBonusIndicatorProps {
   variant?: 'default' | 'minimal';

@@ -5,9 +5,10 @@
 
 'use client';
 
-import { useNFTs } from '@/lib/hooks/useNFTs';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useNFTs } from '@/lib/hooks/nfts/useNFTs';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { CoreMinerCard } from '@/components/CoreMinerCard';
 import Image from 'next/image';
 import type { AxieNFT, MinerNFT } from './types';
 

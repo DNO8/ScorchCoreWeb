@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
+import { useWallet } from '@/lib/hooks/user/useWallet';
 import { Button } from '@/components/ui';
 import { ConnectWallet } from '@/components/wallet';
 import { Menu, X, ChevronDown } from 'lucide-react';

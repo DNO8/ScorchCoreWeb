@@ -11,7 +11,7 @@ import type { Address } from 'viem';
 import { PRICEORACLE_ABI } from '@/lib/abis/economy.abis';
 import type { IPriceOracle } from '../interfaces/IEconomyContract';
 import type { TransactionResult } from '../interfaces/IBlockchainContract';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const logger = createServiceLogger('PriceOracleFactory');
 

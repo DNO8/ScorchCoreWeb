@@ -10,7 +10,7 @@
 
 import type { ContractManager } from '@/lib/contracts/ContractManager';
 import type { DynamicStats } from '@/lib/contracts/interfaces/IMinerStatsManager';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('MinerStatsService');
 

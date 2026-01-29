@@ -5,12 +5,15 @@
  * @category Contracts
  */
 
+import type { Address } from 'viem';
 import type { HatchResult } from './SharedTypes';
+
+// Re-exportar HatchResult para uso externo
+export type { HatchResult };
 
 /**
  * Interface para el contrato GeodeHatcher
- * 
- * Responsabilidad: Eclosionar geodas para crear mineros
+ * Maneja la eclosión de geodas en miners
  */
 export interface IGeodeHatcher {
   /**

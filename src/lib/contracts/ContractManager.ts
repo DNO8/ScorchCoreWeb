@@ -28,8 +28,8 @@
 
 import type { Address } from 'viem';
 import type { Signer, Provider } from 'ethers';
-import { createServiceLogger } from '@/lib/utils/logger';
-import { createRateLimitedContract } from '@/lib/utils/RateLimitedContract';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
+import { createRateLimitedContract } from '@/lib/utils/network/RateLimitedContract';
 
 const log = createServiceLogger('ContractManager');
 
@@ -55,9 +55,13 @@ import { PriceOracleFactory } from './factories/PriceOracleFactory';
 import { CollectionTrackerFactory } from './factories/CollectionTrackerFactory';
 import { SetRegistryFactory } from './factories/SetRegistryFactory';
 import { GeodeHatcherFactory } from './factories/GeodeHatcherFactory';
+import { GeodeStakingManagerFactory } from './factories/GeodeStakingManagerFactory';
+import { CoreMinerStakingManagerFactory } from './factories/CoreMinerStakingManagerFactory';
+import { ScholarshipManagerFactory } from './factories/ScholarshipManagerFactory';
+import { MinigameManagerFactory } from './factories/MinigameManagerFactory';
+import { PvPArenaFactory } from './factories/PvPArenaFactory';
 import { getContractAddress, type ContractName } from '@/lib/config/deployment.config';
-import { CONTRACT_ABIS } from '@/lib/abis';
-import type { IForgeContract, IMiningContract, IERC20Contract, IMinerStatsManager, ICycleContract, IFCoreToken, IFCoreConverter, IPohContract, IAxieContract, IAxieStakingManager, ITrustScoreContract, IRoyaltyContract, IBuyBackFund, IVestingManager, IEmissionSchedule, IRecipeRegistry, IPriceOracle, ICollectionTracker, ISetRegistry, IGeodeHatcher } from './interfaces';
+import type { IForgeContract, IMiningContract, IERC20Contract, IMinerStatsManager, ICycleContract, IFCoreToken, IFCoreConverter, IPohContract, IAxieContract, IAxieStakingManager, ITrustScoreContract, IRoyaltyContract, IBuyBackFund, IVestingManager, IEmissionSchedule, IRecipeRegistry, IPriceOracle, ICollectionTracker, ISetRegistry, IGeodeHatcher, IGeodeStakingManager, ICoreMinerStakingManager, IScholarshipManager, IMinigameManager, IPvPArena } from './interfaces';
 
 /**
  * Configuración global del ContractManager
@@ -161,6 +165,13 @@ export class ContractManager {
     
     // Staking & Integration
     this.registerFactory('AxieStakingManager', AxieStakingManagerFactory, 'createAxieStakingManager', true);
+    this.registerFactory('GeodeStakingManager', GeodeStakingManagerFactory, 'create');
+    this.registerFactory('CoreMinerStakingManager', CoreMinerStakingManagerFactory, 'create');
+    
+    // Economy & Gaming (Phase 3)
+    this.registerFactory('ScholarshipManager', ScholarshipManagerFactory, 'create');
+    this.registerFactory('MinigameManager', MinigameManagerFactory, 'create');
+    this.registerFactory('PvPArena', PvPArenaFactory, 'create');
     
     // Recipe & Collection System
     this.registerFactory('RecipeRegistry', RecipeRegistryFactory, 'create');
@@ -211,10 +222,19 @@ export class ContractManager {
       console.log('🔍 [ContractManager] Creating NEW instance with chainId:', config.chainId);
       ContractManager.instance = new ContractManager(config);
     } else if (config) {
-      console.log('🔍 [ContractManager] Instance exists. Requested chainId:', config.chainId, 'Current chainId:', ContractManager.instance.config.chainId);
-      // Si el chainId cambió, actualizar configuración
-      if (config.chainId !== ContractManager.instance.config.chainId) {
-        console.log('⚠️ [ContractManager] ChainId changed! Updating from', ContractManager.instance.config.chainId, 'to', config.chainId);
+      const currentConfig = ContractManager.instance.config;
+      
+      // Verificar si algo cambió (chainId, signer, o provider)
+      const chainIdChanged = config.chainId !== currentConfig.chainId;
+      const signerChanged = config.signer !== currentConfig.signer;
+      const providerChanged = config.provider !== currentConfig.provider;
+      
+      if (chainIdChanged || signerChanged || providerChanged) {
+        console.log('🔍 [ContractManager] Config changed:', {
+          chainIdChanged,
+          signerChanged: signerChanged ? `${!!currentConfig.signer} → ${!!config.signer}` : false,
+          providerChanged,
+        });
         ContractManager.instance.updateConfig(config);
       }
     }
@@ -471,6 +491,41 @@ export class ContractManager {
    */
   getGeodeHatcher(address?: Address): IGeodeHatcher {
     return this.getContract<IGeodeHatcher>('GeodeHatcher', address);
+  }
+
+  /**
+   * ✅ Obtiene el contrato GeodeStakingManager
+   */
+  getGeodeStakingManager(address?: Address): IGeodeStakingManager {
+    return this.getContract<IGeodeStakingManager>('GeodeStakingManager', address);
+  }
+
+  /**
+   * ✅ Obtiene el contrato CoreMinerStakingManager
+   */
+  getCoreMinerStakingManager(address?: Address): ICoreMinerStakingManager {
+    return this.getContract<ICoreMinerStakingManager>('CoreMinerStakingManager', address);
+  }
+
+  /**
+   * ✅ Obtiene el contrato ScholarshipManager
+   */
+  getScholarshipManager(address?: Address): IScholarshipManager {
+    return this.getContract<IScholarshipManager>('ScholarshipManager', address);
+  }
+
+  /**
+   * ✅ Obtiene el contrato MinigameManager
+   */
+  getMinigameManager(address?: Address): IMinigameManager {
+    return this.getContract<IMinigameManager>('MinigameManager', address);
+  }
+
+  /**
+   * ✅ Obtiene el contrato PvPArena
+   */
+  getPvPArena(address?: Address): IPvPArena {
+    return this.getContract<IPvPArena>('PvPArena', address);
   }
 
   /**

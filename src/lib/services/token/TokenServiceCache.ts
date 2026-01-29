@@ -17,7 +17,7 @@ import type {
   TokenConfig,
   TokenInfo
 } from './types';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 
 const log = createServiceLogger('TokenServiceCache');
 

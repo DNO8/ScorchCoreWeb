@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/useWallet';
-import { useNFTs } from '@/lib/hooks/useNFTs';
-import { useMinerComparison } from '@/lib/hooks/useMinerStatsHistory';
+import { useWallet } from '@/lib/hooks/user/useWallet';
+import { useNFTs } from '@/lib/hooks/nfts/useNFTs';
+import { useMinerComparison } from '@/lib/hooks/mining/useMinerStatsHistory';
 import { Card, Button, Badge, Loading } from '@/components/ui';
 import { MinerPerformanceChart, MinerComparisonTable } from '@/components/minerstats';
 import { BarChart3, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';

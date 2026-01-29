@@ -3,7 +3,8 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Modal, Button } from '@/components/ui';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { CoreMinerVideo } from '@/components/CoreMinerVideo';
+import { createServiceLogger } from '@/lib/utils/logging/logger';
 import { GeodeCategory, AxieClass } from '@/lib/constants/geodes';
 
 const log = createServiceLogger('HatchSuccessModal');
@@ -17,6 +18,7 @@ interface HatchSuccessModalProps {
   minerName: string;
   minerRarity: string;
   minerPower: number;
+  minerIndex: number; // Índice del miner (0-based) - CRÍTICO para mostrar video correcto
   minerVideoUrl: string; // URL del video del miner desde Piñata
 }
 
@@ -29,6 +31,7 @@ export function HatchSuccessModal({
   minerName,
   minerRarity,
   minerPower,
+  minerIndex,
   minerVideoUrl
 }: HatchSuccessModalProps) {
   const router = useRouter();
@@ -62,26 +65,19 @@ export function HatchSuccessModal({
       size="lg"
     >
       <div className="text-center space-y-6">
-        {/* Video del CoreMiner obtenido */}
+        {/* Video del CoreMiner con fallback local→IPFS */}
         <div className="aspect-square max-w-sm mx-auto rounded-lg overflow-hidden bg-gray-800">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              log.error('Failed to load miner video', undefined, { 
-                minerId: minerId.toString(), 
-                minerVideoUrl 
-              });
-              // Fallback: mostrar imagen
-              const target = e.target as HTMLVideoElement;
-              target.style.display = 'none';
-            }}
-          >
-            <source src={minerVideoUrl} type="video/mp4" />
-          </video>
+          <CoreMinerVideo
+            category={category}
+            axieClass={axieClass}
+            minerIndex={minerIndex}
+            ipfsUrl={minerVideoUrl}
+            autoPlay={true}
+            loop={true}
+            muted={true}
+            className="w-full h-full rounded-lg"
+            showFallback={true}
+          />
         </div>
 
         {/* Información del CoreMiner */}
