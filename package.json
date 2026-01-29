@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.9",
+    "@sky-mavis/tanto-connect": "^0.0.21",
+    "@sky-mavis/tanto-wagmi": "^0.0.11",
     "@tanstack/react-query": "^5.90.5",
     "clsx": "^2.1.1",
     "ethers": "^6.15.0",
