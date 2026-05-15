@@ -1,26 +1,27 @@
-import { createConfig, http, type CreateConnectorFn } from 'wagmi';
-import { ronin, saigon } from 'viem/chains';
-import { roninWallet, waypoint } from '@sky-mavis/tanto-wagmi';
-import type { IWaypointProviderConfigs } from '@sky-mavis/tanto-connect';
+import { createConfig, http, type CreateConnectorFn } from "wagmi";
+import { ronin, saigon } from "viem/chains";
+import { roninWallet, waypoint } from "@sky-mavis/tanto-wagmi";
 
 // Waypoint configuration
-const waypointConfig: IWaypointProviderConfigs = {
-  clientId: process.env.NEXT_PUBLIC_WAYPOINT_CLIENT_ID || '',
-  chainId: 2021 // Default to testnet saigon.id,
+const waypointConfig = {
+  clientId: process.env.NEXT_PUBLIC_WAYPOINT_CLIENT_ID || "",
+  chainId: 2021, // Default to testnet saigon.id,
 };
 
 // Type assertion needed due to wagmi v2.19+ type changes
 // tanto-wagmi connectors work at runtime but have outdated type definitions
 const roninWalletConnector = roninWallet() as unknown as CreateConnectorFn;
-const waypointConnector = waypoint(waypointConfig) as unknown as CreateConnectorFn;
+const waypointConnector = waypoint(
+  waypointConfig,
+) as unknown as CreateConnectorFn;
 
 // Create wagmi config with Ronin connectors
 // IMPORTANT: saigon (testnet) is first to be default when no wallet connected
 export const config = createConfig({
   chains: [saigon, ronin], // Testnet first for development
   transports: {
-    [ronin.id]: http('https://api.roninchain.com/rpc'),
-    [saigon.id]: http('https://saigon-testnet.roninchain.com/rpc'),
+    [ronin.id]: http("https://api.roninchain.com/rpc"),
+    [saigon.id]: http("https://saigon-testnet.roninchain.com/rpc"),
   },
   multiInjectedProviderDiscovery: false,
   connectors: [roninWalletConnector, waypointConnector],
