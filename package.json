@@ -17,7 +17,7 @@
     "@sky-mavis/tanto-wagmi": "^0.0.6",
     "@sky-mavis/waypoint": "^4.2.2",
     "@tanstack/react-query": "^5.90.5",
-    "axios": "^1.13.3",
+    "axios": "^1.16.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "ethers": "^6.15.0",
@@ -29,9 +29,9 @@
     "pinata": "^2.5.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "viem": "^2.38.5",
-    "wagmi": "^2.19.1",
-    "yet-another-react-lightbox": "^3.28.0",
+    "viem": "^2.48.11",
+    "wagmi": "^3.6.13",
+    "yet-another-react-lightbox": "^3.32.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {
