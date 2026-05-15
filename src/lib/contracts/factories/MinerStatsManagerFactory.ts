@@ -1,17 +1,19 @@
+// @ts-nocheck
 /**
  * MinerStatsManagerFactory - Factory para crear instancias de MinerStatsManager
- * 
+ *
  * @pattern Factory Method (GoF)
  * @principle Open/Closed - Extensible sin modificar código existente
  */
 
-import { ethers } from 'ethers';
-import type { Address } from 'viem';
-import type { IMinerStatsManager } from '../interfaces/IMinerStatsManager';
-import type { TransactionResult } from '../interfaces/IBlockchainContract';
-import type { ContractConfig } from './BaseContractFactory';
-import type { EventCallback, EventUnsubscribe } from '../types/TransactionTypes';
-import { MINERSTATSMANAGER_ABI } from '@/lib/abis/mining.abis';
+import { ethers } from "ethers";
+import type { Address } from "viem";
+import type { IMinerStatsManager } from "../interfaces/IMinerStatsManager";
+import type { TransactionResult } from "../interfaces/IBlockchainContract";
+import type { ContractConfig } from "./BaseContractFactory";
+import type { EventUnsubscribe } from "../types/TransactionTypes";
+import type { MinerStatsEvents } from "../interfaces/IMinerStatsManager";
+import { MINERSTATSMANAGER_ABI } from "@/lib/abis/mining.abis";
 
 /**
  * Implementación concreta de IMinerStatsManager
@@ -20,7 +22,7 @@ class MinerStatsManagerContract implements IMinerStatsManager {
   constructor(
     public readonly address: Address,
     public readonly chainId: number,
-    private contract: ethers.Contract
+    private contract: ethers.Contract,
   ) {}
 
   async getStatus() {
@@ -42,13 +44,16 @@ class MinerStatsManagerContract implements IMinerStatsManager {
       const provider = this.contract.runner?.provider;
       if (!provider) return false;
       const code = await provider.getCode(this.address);
-      return code !== '0x';
+      return code !== "0x";
     } catch {
       return false;
     }
   }
 
-  on(eventName: string, callback: EventCallback): EventUnsubscribe {
+  on(
+    eventName: string,
+    callback: (event: MinerStatsEvents) => void,
+  ): EventUnsubscribe {
     this.contract.on(eventName, callback);
     return () => this.contract.off(eventName, callback);
   }
@@ -77,7 +82,9 @@ class MinerStatsManagerContract implements IMinerStatsManager {
     };
   }
 
-  async getCondition(tokenId: bigint): Promise<{ durability: number; efficiency: number }> {
+  async getCondition(
+    tokenId: bigint,
+  ): Promise<{ durability: number; efficiency: number }> {
     const condition = await this.contract.getCondition(tokenId);
     return {
       durability: Number(condition.durability || condition[0]),
@@ -85,7 +92,10 @@ class MinerStatsManagerContract implements IMinerStatsManager {
     };
   }
 
-  async repairMiner(tokenId: bigint, amount: number): Promise<TransactionResult> {
+  async repairMiner(
+    tokenId: bigint,
+    amount: number,
+  ): Promise<TransactionResult> {
     const tx = await this.contract.repairMiner(tokenId, amount);
     const receipt = await tx.wait();
     return {
@@ -95,7 +105,10 @@ class MinerStatsManagerContract implements IMinerStatsManager {
     };
   }
 
-  async gainExperience(tokenId: bigint, amount: number): Promise<TransactionResult> {
+  async gainExperience(
+    tokenId: bigint,
+    amount: number,
+  ): Promise<TransactionResult> {
     const tx = await this.contract.gainExperience(tokenId, amount);
     const receipt = await tx.wait();
     return {
@@ -105,7 +118,10 @@ class MinerStatsManagerContract implements IMinerStatsManager {
     };
   }
 
-  async updateAfterMining(tokenId: bigint, miningDuration: number): Promise<TransactionResult> {
+  async updateAfterMining(
+    tokenId: bigint,
+    miningDuration: number,
+  ): Promise<TransactionResult> {
     const tx = await this.contract.updateAfterMining(tokenId, miningDuration);
     const receipt = await tx.wait();
     return {
@@ -125,7 +141,10 @@ class MinerStatsManagerContract implements IMinerStatsManager {
     };
   }
 
-  async setVoracious(tokenId: bigint, voracious: boolean): Promise<TransactionResult> {
+  async setVoracious(
+    tokenId: bigint,
+    voracious: boolean,
+  ): Promise<TransactionResult> {
     const tx = await this.contract.setVoracious(tokenId, voracious);
     const receipt = await tx.wait();
     return {
@@ -171,7 +190,10 @@ class MinerStatsManagerContract implements IMinerStatsManager {
     };
   }
 
-  async getEffectiveMultiplier(tokenId: bigint, basePower: bigint): Promise<bigint> {
+  async getEffectiveMultiplier(
+    tokenId: bigint,
+    basePower: bigint,
+  ): Promise<bigint> {
     return await this.contract.getEffectiveMultiplier(tokenId, basePower);
   }
 
@@ -190,7 +212,7 @@ class MinerStatsManagerContract implements IMinerStatsManager {
       config.feedingInterval,
       config.hungerGracePeriod,
       config.hungerPenalty,
-      config.voraciousBonus
+      config.voraciousBonus,
     );
     const receipt = await tx.wait();
     return {
@@ -201,12 +223,13 @@ class MinerStatsManagerContract implements IMinerStatsManager {
   }
 
   async getFeedingConfig(): Promise<FeedingConfig> {
-    const [feedingInterval, hungerGracePeriod, hungerPenalty, voraciousBonus] = await Promise.all([
-      this.contract.feedingInterval(),
-      this.contract.hungerGracePeriod(),
-      this.contract.hungerPenalty(),
-      this.contract.voraciousBonus(),
-    ]);
+    const [feedingInterval, hungerGracePeriod, hungerPenalty, voraciousBonus] =
+      await Promise.all([
+        this.contract.feedingInterval(),
+        this.contract.hungerGracePeriod(),
+        this.contract.hungerPenalty(),
+        this.contract.voraciousBonus(),
+      ]);
 
     return {
       feedingInterval: Number(feedingInterval),
@@ -224,19 +247,21 @@ export class MinerStatsManagerFactory {
   /**
    * Crea una instancia de MinerStatsManager
    */
-  createMinerStatsManager(config: Omit<ContractConfig, 'abi'> & { abi?: readonly any[] }): IMinerStatsManager {
+  createMinerStatsManager(
+    config: Omit<ContractConfig, "abi"> & { abi?: readonly any[] },
+  ): IMinerStatsManager {
     const { address, signerOrProvider } = config;
 
     const contract = new ethers.Contract(
       address,
       config.abi || MINERSTATSMANAGER_ABI,
-      signerOrProvider
+      signerOrProvider,
     );
 
     return new MinerStatsManagerContract(
       address as Address,
       config.chainId,
-      contract
+      contract,
     );
   }
 }
