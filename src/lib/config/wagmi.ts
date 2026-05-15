@@ -6,7 +6,7 @@ import type { IWaypointProviderConfigs } from '@sky-mavis/tanto-connect';
 // Waypoint configuration
 const waypointConfig: IWaypointProviderConfigs = {
   clientId: process.env.NEXT_PUBLIC_WAYPOINT_CLIENT_ID || '',
-  chainId: saigon.id, // Default to testnet
+  chainId: 2021 // Default to testnet saigon.id,
 };
 
 // Type assertion needed due to wagmi v2.19+ type changes
