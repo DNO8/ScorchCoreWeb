@@ -57,6 +57,7 @@ export default function Home() {
       <ForgeProcess />
 
       {/* Hero - Sé un Prospector
+      little change of test
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-black via-orange-950/20 to-black">
           <div 
