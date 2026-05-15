@@ -3,22 +3,25 @@
  * Soporte para supply dinámico con escucha de eventos y cache
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useEthersSigner, useEthersProvider } from './useEthers';
-import { CoreMinerNFTService } from '@/services/coreMinerNFTService';
-import { metadataCache, type CacheOptions } from '@/lib/cache/metadataCache';
-import type { MinerData, MinerMintedEvent } from '@/lib/abis/coreMinerNFT';
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useEthersSigner, useEthersProvider } from "@/hooks/web3/useEthers";
+import { CoreMinerNFTService } from "@/services/coreMinerNFTService";
+import { metadataCache, type CacheOptions } from "@/lib/cache/metadataCache";
+import type { MinerData, MinerMintedEvent } from "@/lib/abis/coreMinerNFT";
 
 // Helper para generar cache keys consistentes
-const generateCacheKey = (prefix: string, ...parts: (string | number)[]): string => {
-  return `${prefix}-${parts.join('-')}`;
+const generateCacheKey = (
+  prefix: string,
+  ...parts: (string | number)[]
+): string => {
+  return `${prefix}-${parts.join("-")}`;
 };
 
 export interface UseMinerOptions {
   autoRefresh?: boolean; // Escuchar eventos para actualizar
   cache?: boolean; // Usar cache para metadata
   cacheTTL?: number; // TTL del cache en ms
-  cacheStorage?: 'memory' | 'session' | 'local';
+  cacheStorage?: "memory" | "session" | "local";
 }
 
 /**
@@ -47,16 +50,16 @@ export function useMinerTotalSupply(options?: UseMinerOptions) {
 
   const fetchSupply = useCallback(async () => {
     if (!service) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const supply = await service.totalSupply();
       setTotalSupply(supply);
     } catch (err: any) {
-      console.error('[useMinerTotalSupply] Error:', err);
-      setError(err.message || 'Error fetching total supply');
+      console.error("[useMinerTotalSupply] Error:", err);
+      setError(err.message || "Error fetching total supply");
     } finally {
       setLoading(false);
     }
@@ -72,7 +75,10 @@ export function useMinerTotalSupply(options?: UseMinerOptions) {
     if (!service || !options?.autoRefresh) return;
 
     const handleMinerMinted = (event: MinerMintedEvent) => {
-      console.log('[useMinerTotalSupply] New miner minted, updating supply...', event);
+      console.log(
+        "[useMinerTotalSupply] New miner minted, updating supply...",
+        event,
+      );
       fetchSupply();
     };
 
@@ -83,11 +89,11 @@ export function useMinerTotalSupply(options?: UseMinerOptions) {
     };
   }, [service, options?.autoRefresh, fetchSupply]);
 
-  return { 
-    totalSupply, 
-    loading, 
+  return {
+    totalSupply,
+    loading,
     error,
-    refetch: fetchSupply 
+    refetch: fetchSupply,
   };
 }
 
@@ -109,7 +115,7 @@ export function useUserMiners(address?: string, options?: UseMinerOptions) {
 
     setLoading(true);
     setError(null);
-    
+
     try {
       const tokenIds = await service.getTokensOfOwner(address);
       if (isMountedRef.current) {
@@ -117,8 +123,8 @@ export function useUserMiners(address?: string, options?: UseMinerOptions) {
       }
     } catch (err: any) {
       if (isMountedRef.current) {
-        console.error('[useUserMiners] Error:', err);
-        setError(err.message || 'Error fetching miners');
+        console.error("[useUserMiners] Error:", err);
+        setError(err.message || "Error fetching miners");
       }
     } finally {
       if (isMountedRef.current) {
@@ -131,7 +137,7 @@ export function useUserMiners(address?: string, options?: UseMinerOptions) {
   useEffect(() => {
     isMountedRef.current = true;
     fetchMiners();
-    
+
     return () => {
       isMountedRef.current = false;
     };
@@ -145,16 +151,22 @@ export function useUserMiners(address?: string, options?: UseMinerOptions) {
       // Si se mintea a esta dirección, refetch
       const mintedTo = event.to || event.args?.[0];
       if (mintedTo?.toLowerCase() === address.toLowerCase()) {
-        console.log('[useUserMiners] New miner minted to user, refreshing...');
+        console.log("[useUserMiners] New miner minted to user, refreshing...");
         fetchMiners();
       }
     };
 
     const handleTransfer = (from: string, to: string, tokenId: bigint) => {
       // Si se transfiere desde o hacia esta dirección, refetch
-      if (from.toLowerCase() === address.toLowerCase() || 
-          to.toLowerCase() === address.toLowerCase()) {
-        console.log('[useUserMiners] Transfer detected, refreshing...', { from, to, tokenId });
+      if (
+        from.toLowerCase() === address.toLowerCase() ||
+        to.toLowerCase() === address.toLowerCase()
+      ) {
+        console.log("[useUserMiners] Transfer detected, refreshing...", {
+          from,
+          to,
+          tokenId,
+        });
         fetchMiners();
       }
     };
@@ -167,11 +179,11 @@ export function useUserMiners(address?: string, options?: UseMinerOptions) {
     };
   }, [service, address, options?.autoRefresh, fetchMiners]);
 
-  return { 
-    miners, 
-    loading, 
+  return {
+    miners,
+    loading,
     error,
-    refetch: fetchMiners 
+    refetch: fetchMiners,
   };
 }
 
@@ -186,74 +198,85 @@ export function useMinerMetadata(tokenId?: number, options?: UseMinerOptions) {
   const isMountedRef = useRef(true);
 
   const cacheKey = useMemo(
-    () => generateCacheKey('metadata-miner', tokenId || 0),
-    [tokenId]
+    () => generateCacheKey("metadata-miner", tokenId || 0),
+    [tokenId],
   );
 
-  const fetchMetadata = useCallback(async (forceRefresh = false) => {
-    if (!service || tokenId === undefined) {
-      setMetadata(null);
-      return;
-    }
-
-    // Intentar obtener del cache primero (si no es force refresh)
-    if (options?.cache && !forceRefresh) {
-      const cached = metadataCache.get(cacheKey, {
-        storage: options.cacheStorage,
-        ttl: options.cacheTTL,
-      });
-      
-      if (cached) {
-        setMetadata(cached);
-        setLoading(false);
+  const fetchMetadata = useCallback(
+    async (forceRefresh = false) => {
+      if (!service || tokenId === undefined) {
+        setMetadata(null);
         return;
       }
-    }
 
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const meta = await service.getMetadata(tokenId);
-      
-      if (isMountedRef.current) {
-        setMetadata(meta);
-        
-        // Guardar en cache si está habilitado
-        if (options?.cache && meta) {
-          metadataCache.set(cacheKey, meta, {
-            storage: options.cacheStorage,
-            ttl: options.cacheTTL,
-          });
+      // Intentar obtener del cache primero (si no es force refresh)
+      if (options?.cache && !forceRefresh) {
+        const cached = metadataCache.get(cacheKey, {
+          storage: options.cacheStorage,
+          ttl: options.cacheTTL,
+        });
+
+        if (cached) {
+          setMetadata(cached);
+          setLoading(false);
+          return;
         }
       }
-    } catch (err: any) {
-      if (isMountedRef.current) {
-        console.error('[useMinerMetadata] Error:', err);
-        setError(err.message || 'Error fetching metadata');
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const meta = await service.getMetadata(tokenId);
+
+        if (isMountedRef.current) {
+          setMetadata(meta);
+
+          // Guardar en cache si está habilitado
+          if (options?.cache && meta) {
+            metadataCache.set(cacheKey, meta, {
+              storage: options.cacheStorage,
+              ttl: options.cacheTTL,
+            });
+          }
+        }
+      } catch (err: any) {
+        if (isMountedRef.current) {
+          console.error("[useMinerMetadata] Error:", err);
+          setError(err.message || "Error fetching metadata");
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [service, tokenId, options?.cache, options?.cacheStorage, options?.cacheTTL, cacheKey]);
+    },
+    [
+      service,
+      tokenId,
+      options?.cache,
+      options?.cacheStorage,
+      options?.cacheTTL,
+      cacheKey,
+    ],
+  );
 
   useEffect(() => {
     isMountedRef.current = true;
     fetchMetadata();
-    
+
     return () => {
       isMountedRef.current = false;
     };
   }, [fetchMetadata]);
 
-  return { 
-    metadata, 
-    loading, 
+  return {
+    metadata,
+    loading,
     error,
     refetch: () => fetchMetadata(true),
-    invalidateCache: () => metadataCache.delete(cacheKey, options?.cacheStorage),
+    invalidateCache: () =>
+      metadataCache.delete(cacheKey, options?.cacheStorage),
   };
 }
 
@@ -268,73 +291,84 @@ export function useMinerData(tokenId?: number, options?: UseMinerOptions) {
   const isMountedRef = useRef(true);
 
   const cacheKey = useMemo(
-    () => generateCacheKey('miner-data', tokenId || 0),
-    [tokenId]
+    () => generateCacheKey("miner-data", tokenId || 0),
+    [tokenId],
   );
 
-  const fetchData = useCallback(async (forceRefresh = false) => {
-    if (!service || tokenId === undefined) {
-      setData(null);
-      return;
-    }
-
-    // Intentar cache primero
-    if (options?.cache && !forceRefresh) {
-      const cached = metadataCache.get<MinerData>(cacheKey, {
-        storage: options.cacheStorage,
-        ttl: options.cacheTTL,
-      });
-      
-      if (cached) {
-        setData(cached);
-        setLoading(false);
+  const fetchData = useCallback(
+    async (forceRefresh = false) => {
+      if (!service || tokenId === undefined) {
+        setData(null);
         return;
       }
-    }
 
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const minerData = await service.getMinerData(tokenId);
-      
-      if (isMountedRef.current) {
-        setData(minerData);
-        
-        if (options?.cache && minerData) {
-          metadataCache.set(cacheKey, minerData, {
-            storage: options.cacheStorage,
-            ttl: options.cacheTTL,
-          });
+      // Intentar cache primero
+      if (options?.cache && !forceRefresh) {
+        const cached = metadataCache.get<MinerData>(cacheKey, {
+          storage: options.cacheStorage,
+          ttl: options.cacheTTL,
+        });
+
+        if (cached) {
+          setData(cached);
+          setLoading(false);
+          return;
         }
       }
-    } catch (err: any) {
-      if (isMountedRef.current) {
-        console.error('[useMinerData] Error:', err);
-        setError(err.message || 'Error fetching miner data');
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const minerData = await service.getMinerData(tokenId);
+
+        if (isMountedRef.current) {
+          setData(minerData);
+
+          if (options?.cache && minerData) {
+            metadataCache.set(cacheKey, minerData, {
+              storage: options.cacheStorage,
+              ttl: options.cacheTTL,
+            });
+          }
+        }
+      } catch (err: any) {
+        if (isMountedRef.current) {
+          console.error("[useMinerData] Error:", err);
+          setError(err.message || "Error fetching miner data");
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [service, tokenId, options?.cache, options?.cacheStorage, options?.cacheTTL, cacheKey]);
+    },
+    [
+      service,
+      tokenId,
+      options?.cache,
+      options?.cacheStorage,
+      options?.cacheTTL,
+      cacheKey,
+    ],
+  );
 
   useEffect(() => {
     isMountedRef.current = true;
     fetchData();
-    
+
     return () => {
       isMountedRef.current = false;
     };
   }, [fetchData]);
 
-  return { 
-    data, 
-    loading, 
-    error, 
+  return {
+    data,
+    loading,
+    error,
     refetch: () => fetchData(true),
-    invalidateCache: () => metadataCache.delete(cacheKey, options?.cacheStorage),
+    invalidateCache: () =>
+      metadataCache.delete(cacheKey, options?.cacheStorage),
   };
 }
 
@@ -343,7 +377,7 @@ export function useMinerData(tokenId?: number, options?: UseMinerOptions) {
  */
 export function useMinerMintedEvents(
   callback: (event: MinerMintedEvent) => void,
-  dependencies: any[] = []
+  dependencies: any[] = [],
 ) {
   const service = useCoreMinerNFT();
   const callbackRef = useRef(callback);
@@ -373,7 +407,7 @@ export function useMinerMintedEvents(
  */
 export function useTransferEvents(
   callback: (from: string, to: string, tokenId: bigint) => void,
-  dependencies: any[] = []
+  dependencies: any[] = [],
 ) {
   const service = useCoreMinerNFT();
   const callbackRef = useRef(callback);
@@ -400,12 +434,23 @@ export function useTransferEvents(
 /**
  * Hook combinado con datos + metadata con cache
  */
-export function useCompleteMinerInfo(tokenId?: number, options?: UseMinerOptions) {
-  const { data, loading: loadingData, error: errorData, refetch: refetchData } = 
-    useMinerData(tokenId, options);
-  
-  const { metadata, loading: loadingMetadata, error: errorMetadata, refetch: refetchMetadata } = 
-    useMinerMetadata(tokenId, options);
+export function useCompleteMinerInfo(
+  tokenId?: number,
+  options?: UseMinerOptions,
+) {
+  const {
+    data,
+    loading: loadingData,
+    error: errorData,
+    refetch: refetchData,
+  } = useMinerData(tokenId, options);
+
+  const {
+    metadata,
+    loading: loadingMetadata,
+    error: errorMetadata,
+    refetch: refetchMetadata,
+  } = useMinerMetadata(tokenId, options);
 
   const loading = loadingData || loadingMetadata;
   const error = errorData || errorMetadata;

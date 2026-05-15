@@ -1,15 +1,15 @@
 /**
  * RecipeManagerTable
- * 
+ *
  * Tabla para gestionar recetas con acciones admin
- * 
+ *
  * @pattern Presentation Component
  */
 
-import React, { useState } from 'react';
-import { Button, Badge } from '@/components/ui';
-import type { RecipeInfo } from '@/lib/services/recipe';
-import { MINER_TYPE_EMOJIS } from '@/lib/contracts/interfaces/IRecipeRegistry';
+import React, { useState } from "react";
+import { Button, Badge } from "@/components/ui";
+import type { RecipeInfo } from "@/lib/services/recipe";
+import { MINER_TYPE_EMOJIS } from "@/lib/contracts/interfaces/IRecipeRegistry";
 
 export interface RecipeManagerTableProps {
   recipes: RecipeInfo[];
@@ -25,16 +25,16 @@ export function RecipeManagerTable({
   isLoading = false,
 }: RecipeManagerTableProps) {
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
 
-  const filteredRecipes = recipes.filter(recipe => {
-    if (filter === 'active') return recipe.isActive;
-    if (filter === 'inactive') return !recipe.isActive;
+  const filteredRecipes = recipes.filter((recipe) => {
+    if (filter === "active") return recipe.enabled;
+    if (filter === "inactive") return !recipe.enabled;
     return true;
   });
 
   const handleToggle = async (recipe: RecipeInfo) => {
-    setTogglingId(recipe.id);
+    setTogglingId(recipe.id.toString());
     try {
       await onToggle(recipe);
     } finally {
@@ -52,34 +52,34 @@ export function RecipeManagerTable({
             {/* Filters */}
             <div className="flex gap-2">
               <button
-                onClick={() => setFilter('all')}
+                onClick={() => setFilter("all")}
                 className={`px-3 py-1 rounded text-sm ${
-                  filter === 'all'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  filter === "all"
+                    ? "bg-blue-500 text-white"
+                    : "bg-slate-700 text-gray-300 hover:bg-slate-600"
                 }`}
               >
                 Todas ({recipes.length})
               </button>
               <button
-                onClick={() => setFilter('active')}
+                onClick={() => setFilter("active")}
                 className={`px-3 py-1 rounded text-sm ${
-                  filter === 'active'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  filter === "active"
+                    ? "bg-green-500 text-white"
+                    : "bg-slate-700 text-gray-300 hover:bg-slate-600"
                 }`}
               >
-                Activas ({recipes.filter(r => r.isActive).length})
+                Activas ({recipes.filter((r) => r.enabled).length})
               </button>
               <button
-                onClick={() => setFilter('inactive')}
+                onClick={() => setFilter("inactive")}
                 className={`px-3 py-1 rounded text-sm ${
-                  filter === 'inactive'
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                  filter === "inactive"
+                    ? "bg-orange-500 text-white"
+                    : "bg-slate-700 text-gray-300 hover:bg-slate-600"
                 }`}
               >
-                Inactivas ({recipes.filter(r => !r.isActive).length})
+                Inactivas ({recipes.filter((r) => !r.enabled).length})
               </button>
             </div>
             <Button
@@ -136,11 +136,15 @@ export function RecipeManagerTable({
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">
-                      {MINER_TYPE_EMOJIS[recipe.minerType as keyof typeof MINER_TYPE_EMOJIS]}
+                      {
+                        MINER_TYPE_EMOJIS[
+                          recipe.minerType as keyof typeof MINER_TYPE_EMOJIS
+                        ]
+                      }
                     </span>
                     <div>
                       <div className="text-sm font-medium text-white">
-                        {recipe.displayName}
+                        {recipe.name}
                       </div>
                       <div className="text-xs text-gray-500">
                         {recipe.typeName} #{recipe.minerIndex}
@@ -153,8 +157,11 @@ export function RecipeManagerTable({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <Badge
                     variant={
-                      recipe.category === 0 ? 'default' :
-                      recipe.category === 1 ? 'primary' : 'success'
+                      recipe.category === 0
+                        ? "default"
+                        : recipe.category === 1
+                          ? "info"
+                          : "success"
                     }
                     className="text-xs"
                   >
@@ -168,36 +175,34 @@ export function RecipeManagerTable({
                     <div className="text-white font-medium">
                       {recipe.maxSupply.toString()}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      Max supply
-                    </div>
+                    <div className="text-xs text-gray-500">Max supply</div>
                   </div>
                 </td>
 
                 {/* Status */}
                 <td className="px-6 py-4 whitespace-nowrap">
                   <Badge
-                    variant={recipe.isActive ? 'success' : 'default'}
+                    variant={recipe.enabled ? "success" : "default"}
                     className="text-xs"
                   >
-                    {recipe.isActive ? '✅ Activa' : '⚠️ Inactiva'}
+                    {recipe.enabled ? "✅ Activa" : "⚠️ Inactiva"}
                   </Badge>
                 </td>
 
                 {/* Actions */}
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <Button
-                    variant={recipe.isActive ? 'secondary' : 'primary'}
+                    variant={recipe.enabled ? "secondary" : "primary"}
                     size="sm"
                     onClick={() => handleToggle(recipe)}
-                    disabled={togglingId === recipe.id || isLoading}
+                    disabled={togglingId === recipe.id.toString() || isLoading}
                     className="text-xs"
                   >
-                    {togglingId === recipe.id
-                      ? '⏳'
-                      : recipe.isActive
-                      ? 'Desactivar'
-                      : 'Activar'}
+                    {togglingId === recipe.id.toString()
+                      ? "⏳"
+                      : recipe.enabled
+                        ? "Desactivar"
+                        : "Activar"}
                   </Button>
                 </td>
               </tr>
@@ -211,9 +216,9 @@ export function RecipeManagerTable({
         <div className="p-12 text-center text-gray-400">
           <div className="text-4xl mb-4">📦</div>
           <p className="text-lg">
-            {filter === 'all'
-              ? 'No hay recetas configuradas'
-              : `No hay recetas ${filter === 'active' ? 'activas' : 'inactivas'}`}
+            {filter === "all"
+              ? "No hay recetas configuradas"
+              : `No hay recetas ${filter === "active" ? "activas" : "inactivas"}`}
           </p>
         </div>
       )}
