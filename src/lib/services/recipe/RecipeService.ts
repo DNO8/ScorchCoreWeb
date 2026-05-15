@@ -1,27 +1,27 @@
 /**
  * RecipeService
- * 
+ *
  * Service Layer para gestionar recetas de forja
  * Encapsula lógica de negocio y operaciones admin
- * 
+ *
  * @pattern Service Layer (DDD)
  * @pattern Facade - Simplifica acceso a RecipeRegistry
  */
 
-import type { ContractManager } from '@/lib/contracts/ContractManager';
-import type { Address } from 'viem';
-import { 
-  RecipeCategory, 
+import type { ContractManager } from "@/lib/contracts/ContractManager";
+import type { Address } from "viem";
+import {
+  RecipeCategory,
   MinerType,
   CATEGORY_NAMES,
   MINER_TYPE_NAMES,
   MINER_TYPE_EMOJIS,
   type RecipeInfo,
-  type Recipe
-} from '@/lib/contracts/interfaces/IRecipeRegistry';
-import { createServiceLogger } from '@/lib/utils/logging/logger';
+} from "@/lib/contracts/interfaces/IRecipeRegistry";
+import type { Recipe } from "@/lib/contracts/interfaces/SharedTypes";
+import { createServiceLogger } from "@/lib/utils/logging/logger";
 
-const log = createServiceLogger('RecipeService');
+const log = createServiceLogger("RecipeService");
 
 /**
  * Filtros para búsqueda de recetas
@@ -29,7 +29,7 @@ const log = createServiceLogger('RecipeService');
 export interface RecipeFilters {
   category?: RecipeCategory;
   minerType?: MinerType;
-  isActive?: boolean;
+  enabled?: boolean;
   hasSupply?: boolean;
 }
 
@@ -62,7 +62,7 @@ export class RecipeService {
       const registry = this.contractManager.getRecipeRegistry();
       return await registry.hasAdminRole(address);
     } catch (error) {
-      log.error('Error checking admin role', { error, address });
+      log.error("Error checking admin role", { error, address });
       return false;
     }
   }
@@ -73,14 +73,14 @@ export class RecipeService {
   async getRecipe(
     category: number,
     minerType: number,
-    minerIndex: number
+    minerIndex: number,
   ): Promise<RecipeInfo | null> {
     try {
-      log.info('Getting recipe', { category, minerType, minerIndex });
+      log.info("Getting recipe", { category, minerType, minerIndex });
 
       const registry = this.contractManager.getRecipeRegistry();
-      
-      const [maxSupply, isActive] = await Promise.all([
+
+      const [maxSupply, enabled] = await Promise.all([
         registry.getRecipeMaxSupply(category, minerType, minerIndex),
         registry.isRecipeActive(category, minerType, minerIndex),
       ]);
@@ -91,25 +91,34 @@ export class RecipeService {
       }
 
       const recipe: Recipe = {
+        id: category * 100 + minerType * 10 + minerIndex,
+        name: this.generateRecipeName(category, minerType, minerIndex),
         category,
         minerType,
         minerIndex,
+        enabled: enabled,
         maxSupply,
-        isActive,
-        displayName: this.generateRecipeName(category, minerType, minerIndex),
+        currentSupply: 0n,
+        materials: [],
+        chances: { success: 8000, critical: 1000, rare: 500 },
       };
 
       const recipeInfo = await this.enrichRecipeInfo(recipe);
 
-      log.info('Recipe retrieved', { 
+      log.info("Recipe retrieved", {
         id: recipeInfo.id,
-        isActive,
-        maxSupply: maxSupply.toString()
+        enabled,
+        maxSupply: maxSupply.toString(),
       });
 
       return recipeInfo;
     } catch (error) {
-      log.error('Error getting recipe', { error, category, minerType, minerIndex });
+      log.error("Error getting recipe", {
+        error,
+        category,
+        minerType,
+        minerIndex,
+      });
       return null;
     }
   }
@@ -119,7 +128,7 @@ export class RecipeService {
    */
   async getAllRecipes(filters?: RecipeFilters): Promise<RecipeInfo[]> {
     try {
-      log.info('Getting all recipes', { filters });
+      log.info("Getting all recipes", { filters });
 
       const recipes: RecipeInfo[] = [];
       const registry = this.contractManager.getRecipeRegistry();
@@ -147,7 +156,7 @@ export class RecipeService {
 
           for (let index = 0; index <= maxMinerIndex; index++) {
             try {
-              const [maxSupply, isActive] = await Promise.all([
+              const [maxSupply, enabled] = await Promise.all([
                 registry.getRecipeMaxSupply(cat, type, index),
                 registry.isRecipeActive(cat, type, index),
               ]);
@@ -158,17 +167,24 @@ export class RecipeService {
               }
 
               // Aplicar filtro de estado activo
-              if (filters?.isActive !== undefined && isActive !== filters.isActive) {
+              if (
+                filters?.enabled !== undefined &&
+                enabled !== filters.enabled
+              ) {
                 continue;
               }
 
               const recipe: Recipe = {
+                id: cat * 100 + type * 10 + index,
+                name: this.generateRecipeName(cat, type, index),
                 category: cat,
                 minerType: type,
                 minerIndex: index,
+                enabled,
                 maxSupply,
-                isActive,
-                displayName: this.generateRecipeName(cat, type, index),
+                currentSupply: 0n,
+                materials: [],
+                chances: { success: 8000, critical: 1000, rare: 500 },
               };
 
               const recipeInfo = await this.enrichRecipeInfo(recipe);
@@ -187,11 +203,11 @@ export class RecipeService {
         }
       }
 
-      log.info('All recipes retrieved', { count: recipes.length });
+      log.info("All recipes retrieved", { count: recipes.length });
 
       return recipes;
     } catch (error) {
-      log.error('Error getting all recipes', { error });
+      log.error("Error getting all recipes", { error });
       return [];
     }
   }
@@ -204,15 +220,15 @@ export class RecipeService {
     minerType: number,
     minerIndex: number,
     maxSupply: bigint,
-    isActive: boolean = true
+    enabled: boolean = true,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      log.info('Setting recipe', { 
-        category, 
-        minerType, 
-        minerIndex, 
+      log.info("Setting recipe", {
+        category,
+        minerType,
+        minerIndex,
         maxSupply: maxSupply.toString(),
-        isActive 
+        enabled,
       });
 
       const registry = this.contractManager.getRecipeRegistry();
@@ -222,7 +238,7 @@ export class RecipeService {
         category,
         minerType,
         minerIndex,
-        maxSupply
+        maxSupply,
       );
 
       if (!result.success) {
@@ -230,31 +246,31 @@ export class RecipeService {
       }
 
       // Si se requiere desactivar, hacer una segunda transacción
-      if (!isActive) {
+      if (!enabled) {
         const statusResult = await registry.setRecipeStatus(
           category,
           minerType,
           minerIndex,
-          false
+          false,
         );
-        
+
         if (!statusResult.success) {
           return statusResult;
         }
       }
 
-      log.info('Recipe set successfully', { 
-        category, 
-        minerType, 
-        minerIndex 
+      log.info("Recipe set successfully", {
+        category,
+        minerType,
+        minerIndex,
       });
 
       return { success: true };
     } catch (error) {
-      log.error('Error setting recipe', { error });
+      log.error("Error setting recipe", { error });
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -266,14 +282,14 @@ export class RecipeService {
     category: number,
     minerType: number,
     minerIndex: number,
-    isActive: boolean
+    enabled: boolean,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      log.info('Toggling recipe status', { 
-        category, 
-        minerType, 
-        minerIndex, 
-        isActive 
+      log.info("Toggling recipe status", {
+        category,
+        minerType,
+        minerIndex,
+        enabled,
       });
 
       const registry = this.contractManager.getRecipeRegistry();
@@ -282,24 +298,24 @@ export class RecipeService {
         category,
         minerType,
         minerIndex,
-        isActive
+        enabled,
       );
 
       if (result.success) {
-        log.info('Recipe status toggled', { 
-          category, 
-          minerType, 
+        log.info("Recipe status toggled", {
+          category,
+          minerType,
           minerIndex,
-          isActive 
+          enabled,
         });
       }
 
       return result;
     } catch (error) {
-      log.error('Error toggling recipe', { error });
+      log.error("Error toggling recipe", { error });
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -313,35 +329,35 @@ export class RecipeService {
       minerType: number;
       minerIndex: number;
       maxSupply: bigint;
-    }>
+    }>,
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      log.info('Batch setting recipes', { count: recipes.length });
+      log.info("Batch setting recipes", { count: recipes.length });
 
       const registry = this.contractManager.getRecipeRegistry();
 
-      const categories = recipes.map(r => r.category);
-      const minerTypes = recipes.map(r => r.minerType);
-      const minerIndexes = recipes.map(r => r.minerIndex);
-      const maxSupplies = recipes.map(r => r.maxSupply);
+      const categories = recipes.map((r) => r.category);
+      const minerTypes = recipes.map((r) => r.minerType);
+      const minerIndexes = recipes.map((r) => r.minerIndex);
+      const maxSupplies = recipes.map((r) => r.maxSupply);
 
       const result = await registry.batchSetRecipeMaxSupply(
         categories,
         minerTypes,
         minerIndexes,
-        maxSupplies
+        maxSupplies,
       );
 
       if (result.success) {
-        log.info('Recipes batch set successfully', { count: recipes.length });
+        log.info("Recipes batch set successfully", { count: recipes.length });
       }
 
       return result;
     } catch (error) {
-      log.error('Error batch setting recipes', { error });
+      log.error("Error batch setting recipes", { error });
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -355,12 +371,13 @@ export class RecipeService {
 
       const stats: RecipeStats = {
         total: recipes.length,
-        active: recipes.filter(r => r.isActive).length,
-        inactive: recipes.filter(r => !r.isActive).length,
+        active: recipes.filter((r) => r.enabled).length,
+        inactive: recipes.filter((r) => !r.enabled).length,
         byCategory: {
           [RecipeCategory.COMMON]: 0,
           [RecipeCategory.RARE]: 0,
           [RecipeCategory.EPIC]: 0,
+          [RecipeCategory.LEGENDARY]: 0,
         },
         byType: {
           [MinerType.BEAST]: 0,
@@ -375,14 +392,14 @@ export class RecipeService {
         },
       };
 
-      recipes.forEach(recipe => {
+      recipes.forEach((recipe) => {
         stats.byCategory[recipe.category as RecipeCategory]++;
         stats.byType[recipe.minerType as MinerType]++;
       });
 
       return stats;
     } catch (error) {
-      log.error('Error getting recipe stats', { error });
+      log.error("Error getting recipe stats", { error });
       throw error;
     }
   }
@@ -399,13 +416,14 @@ export class RecipeService {
     // Por ahora, asumimos que no se ha forjado nada
     const currentSupply = 0n;
     const remaining = recipe.maxSupply - currentSupply;
-    const progress = recipe.maxSupply > 0n 
-      ? Number((currentSupply * 100n) / recipe.maxSupply) 
-      : 0;
+    const progress =
+      recipe.maxSupply > 0n
+        ? Number((currentSupply * 100n) / recipe.maxSupply)
+        : 0;
 
     return {
       ...recipe,
-      id: `${recipe.category}-${recipe.minerType}-${recipe.minerIndex}`,
+      id: recipe.id,
       categoryName: CATEGORY_NAMES[recipe.category as RecipeCategory],
       typeName: MINER_TYPE_NAMES[recipe.minerType as MinerType],
       currentSupply,
@@ -420,7 +438,7 @@ export class RecipeService {
   private generateRecipeName(
     category: number,
     minerType: number,
-    minerIndex: number
+    minerIndex: number,
   ): string {
     const categoryName = CATEGORY_NAMES[category as RecipeCategory];
     const typeName = MINER_TYPE_NAMES[minerType as MinerType];
@@ -433,6 +451,8 @@ export class RecipeService {
 /**
  * Factory para crear instancia del servicio
  */
-export function createRecipeService(contractManager: ContractManager): RecipeService {
+export function createRecipeService(
+  contractManager: ContractManager,
+): RecipeService {
   return new RecipeService(contractManager);
 }

@@ -1,15 +1,15 @@
 /**
  * IRecipeRegistry Interface
- * 
+ *
  * Interface para interactuar con el contrato RecipeRegistry
  * Gestiona configuración y administración de recetas de forja
- * 
+ *
  * @pattern Interface Segregation Principle
  */
 
-import type { Address } from 'viem';
-import type { IBlockchainContract } from './IBlockchainContract';
-import type { Recipe as BaseRecipe } from './SharedTypes';
+import type { Address } from "viem";
+import type { IBlockchainContract } from "./IBlockchainContract";
+import type { Recipe as BaseRecipe } from "./SharedTypes";
 
 /**
  * Extensión de Recipe para UI de RecipeRegistry
@@ -57,7 +57,7 @@ export interface IRecipeRegistry extends IBlockchainContract {
     category: number,
     minerType: number,
     minerIndex: number,
-    maxSupply: bigint
+    maxSupply: bigint,
   ): Promise<TransactionResult>;
 
   /**
@@ -71,7 +71,7 @@ export interface IRecipeRegistry extends IBlockchainContract {
     categories: number[],
     minerTypes: number[],
     minerIndexes: number[],
-    maxSupplies: bigint[]
+    maxSupplies: bigint[],
   ): Promise<TransactionResult>;
 
   /**
@@ -83,7 +83,7 @@ export interface IRecipeRegistry extends IBlockchainContract {
   getRecipeMaxSupply(
     category: number,
     minerType: number,
-    minerIndex: number
+    minerIndex: number,
   ): Promise<bigint>;
 
   /**
@@ -95,7 +95,7 @@ export interface IRecipeRegistry extends IBlockchainContract {
   isRecipeActive(
     category: number,
     minerType: number,
-    minerIndex: number
+    minerIndex: number,
   ): Promise<boolean>;
 
   /**
@@ -109,7 +109,7 @@ export interface IRecipeRegistry extends IBlockchainContract {
     category: number,
     minerType: number,
     minerIndex: number,
-    isActive: boolean
+    isActive: boolean,
   ): Promise<TransactionResult>;
 
   /**
@@ -146,6 +146,7 @@ export enum RecipeCategory {
   COMMON = 0,
   RARE = 1,
   EPIC = 2,
+  LEGENDARY = 3,
 }
 
 /**
@@ -167,46 +168,48 @@ export enum MinerType {
  * Nombres de categorías para UI
  */
 export const CATEGORY_NAMES: Record<RecipeCategory, string> = {
-  [RecipeCategory.COMMON]: 'Common',
-  [RecipeCategory.RARE]: 'Rare',
-  [RecipeCategory.EPIC]: 'Epic',
+  [RecipeCategory.COMMON]: "Common",
+  [RecipeCategory.RARE]: "Rare",
+  [RecipeCategory.EPIC]: "Epic",
+  [RecipeCategory.LEGENDARY]: "Legendary",
 };
 
 /**
  * Nombres de tipos para UI
  */
 export const MINER_TYPE_NAMES: Record<MinerType, string> = {
-  [MinerType.BEAST]: 'Beast',
-  [MinerType.AQUA]: 'Aqua',
-  [MinerType.BIRD]: 'Bird',
-  [MinerType.REPTILE]: 'Reptile',
-  [MinerType.BUG]: 'Bug',
-  [MinerType.PLANT]: 'Plant',
-  [MinerType.MECH]: 'Mech',
-  [MinerType.DUSK]: 'Dusk',
-  [MinerType.DAWN]: 'Dawn',
+  [MinerType.BEAST]: "Beast",
+  [MinerType.AQUA]: "Aqua",
+  [MinerType.BIRD]: "Bird",
+  [MinerType.REPTILE]: "Reptile",
+  [MinerType.BUG]: "Bug",
+  [MinerType.PLANT]: "Plant",
+  [MinerType.MECH]: "Mech",
+  [MinerType.DUSK]: "Dusk",
+  [MinerType.DAWN]: "Dawn",
 };
 
 /**
  * Emojis para tipos de miner
  */
 export const MINER_TYPE_EMOJIS: Record<MinerType, string> = {
-  [MinerType.BEAST]: '🐉',
-  [MinerType.AQUA]: '🐟',
-  [MinerType.BIRD]: '🦅',
-  [MinerType.REPTILE]: '🦎',
-  [MinerType.BUG]: '🦋',
-  [MinerType.PLANT]: '🌿',
-  [MinerType.MECH]: '🤖',
-  [MinerType.DUSK]: '🌆',
-  [MinerType.DAWN]: '🌅',
+  [MinerType.BEAST]: "🐉",
+  [MinerType.AQUA]: "🐟",
+  [MinerType.BIRD]: "🦅",
+  [MinerType.REPTILE]: "🦎",
+  [MinerType.BUG]: "🦋",
+  [MinerType.PLANT]: "🌿",
+  [MinerType.MECH]: "🤖",
+  [MinerType.DUSK]: "🌆",
+  [MinerType.DAWN]: "🌅",
 };
 
 /**
  * Colores para categorías
  */
 export const CATEGORY_COLORS: Record<RecipeCategory, string> = {
-  [RecipeCategory.COMMON]: 'gray',
-  [RecipeCategory.RARE]: 'blue',
-  [RecipeCategory.EPIC]: 'purple',
+  [RecipeCategory.COMMON]: "gray",
+  [RecipeCategory.RARE]: "blue",
+  [RecipeCategory.EPIC]: "purple",
+  [RecipeCategory.LEGENDARY]: "gold",
 };
