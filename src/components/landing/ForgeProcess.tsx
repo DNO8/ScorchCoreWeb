@@ -12,7 +12,7 @@ const assets = {
     height: 1024,
   },
   input: {
-    src: "/assets/landing/input_ice_chamber.webp",
+    src: "/assets/landing/input-ice-chamber.webp",
     width: 828,
     height: 743,
   },
