@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 # MD
 ANALISIS_COHERENCIA_PROYECTO.md
+
+# Videos served from IPFS - do not include in repo
+public/**/*.mp4
