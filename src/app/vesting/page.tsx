@@ -1,11 +1,13 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/user/useWallet';
-import { Loading } from '@/components/ui';
-import { VestingDashboard } from '@/components/vesting';
+export const dynamic = "force-dynamic";
+
+import React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useWallet } from "@/lib/hooks/user/useWallet";
+import { Loading } from "@/components/ui";
+import { VestingDashboard } from "@/components/vesting";
 
 export default function VestingPage() {
   const router = useRouter();
@@ -16,10 +18,10 @@ export default function VestingPage() {
     if (!isConnected) {
       const timer = setTimeout(() => {
         if (!isConnected) {
-          router.push('/');
+          router.push("/");
         }
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [isConnected, router]);
@@ -37,7 +39,10 @@ export default function VestingPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/" className="text-blue-400 hover:text-blue-300 flex items-center gap-2 mb-4">
+          <Link
+            href="/"
+            className="text-blue-400 hover:text-blue-300 flex items-center gap-2 mb-4"
+          >
             ← Volver al Dashboard
           </Link>
           <h1 className="text-4xl font-bold mb-2">🔒 Vesting Manager</h1>

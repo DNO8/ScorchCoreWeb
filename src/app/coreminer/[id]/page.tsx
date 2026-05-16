@@ -1,16 +1,23 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useCoreMinerMetadata, getMiningPower, getRarity, getMaxSupply } from '@/hooks/metadata/useCoreMinerMetadata';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { useAccount, useReadContract } from 'wagmi';
-import { createServiceLogger } from '@/lib/utils/logging/logger';
-import { GeodeCategory, AxieClass } from '@/lib/constants/geodes';
+export const dynamic = "force-dynamic";
 
-const log = createServiceLogger('CoreMinerDetail');
+import React, { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  useCoreMinerMetadata,
+  getMiningPower,
+  getRarity,
+  getMaxSupply,
+} from "@/hooks/metadata/useCoreMinerMetadata";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { useAccount, useReadContract } from "wagmi";
+import { createServiceLogger } from "@/lib/utils/logging/logger";
+import { GeodeCategory, AxieClass } from "@/lib/constants/geodes";
+
+const log = createServiceLogger("CoreMinerDetail");
 
 interface CoreMinerNFTData {
   category: number;
@@ -43,12 +50,12 @@ export default function CoreMinerDetailPage() {
           minerType: 0, // BEAST
           minerIndex: 0,
           power: 50,
-          owner: address || '',
+          owner: address || "",
           exists: true,
         };
         setNftData(mockData);
       } catch (error) {
-        log.error('Error loading NFT data', { error, tokenId });
+        log.error("Error loading NFT data", { error, tokenId });
       } finally {
         setIsLoading(false);
       }
@@ -57,13 +64,28 @@ export default function CoreMinerDetailPage() {
     loadNFTData();
   }, [tokenId, address]);
 
-  const { metadata, loading: metadataLoading, error } = useCoreMinerMetadata(
-    nftData?.category as GeodeCategory ?? GeodeCategory.PETIT,
-    ['beast', 'aqua', 'bird', 'reptile', 'bug', 'plant', 'mech', 'dusk', 'dawn'][nftData?.minerType ?? 0],
-    nftData?.minerIndex ?? 0
+  const {
+    metadata,
+    loading: metadataLoading,
+    error,
+  } = useCoreMinerMetadata(
+    (nftData?.category as GeodeCategory) ?? GeodeCategory.PETIT,
+    [
+      "beast",
+      "aqua",
+      "bird",
+      "reptile",
+      "bug",
+      "plant",
+      "mech",
+      "dusk",
+      "dawn",
+    ][nftData?.minerType ?? 0],
+    nftData?.minerIndex ?? 0,
   );
 
-  const isOwner = address && nftData?.owner.toLowerCase() === address.toLowerCase();
+  const isOwner =
+    address && nftData?.owner.toLowerCase() === address.toLowerCase();
 
   if (isLoading || metadataLoading) {
     return <LoadingState />;
@@ -78,11 +100,11 @@ export default function CoreMinerDetailPage() {
   const maxSupply = getMaxSupply(metadata);
 
   const rarityColors: Record<string, string> = {
-    Common: 'text-gray-400',
-    Rare: 'text-blue-400',
-    Epic: 'text-purple-400',
-    Legendary: 'text-orange-400',
-    Mythic: 'text-red-400',
+    Common: "text-gray-400",
+    Rare: "text-blue-400",
+    Epic: "text-purple-400",
+    Legendary: "text-orange-400",
+    Mythic: "text-red-400",
   };
 
   return (
@@ -90,7 +112,10 @@ export default function CoreMinerDetailPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <div className="mb-6 text-sm text-gray-400 flex items-center gap-2">
-          <Link href="/inventory" className="hover:text-white transition-colors">
+          <Link
+            href="/inventory"
+            className="hover:text-white transition-colors"
+          >
             ← Inventario
           </Link>
           <span>/</span>
@@ -102,7 +127,10 @@ export default function CoreMinerDetailPage() {
           <div className="space-y-4">
             <Card className="p-6 bg-gray-800 border-gray-700">
               <video
-                src={metadata.animation_url.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')}
+                src={metadata.animation_url.replace(
+                  "ipfs://",
+                  "https://gateway.pinata.cloud/ipfs/",
+                )}
                 autoPlay
                 loop
                 muted
@@ -117,7 +145,9 @@ export default function CoreMinerDetailPage() {
               <Card className="p-4 bg-green-900/20 border-green-500/50">
                 <div className="flex items-center gap-2">
                   <span className="text-green-400">✓</span>
-                  <span className="text-sm text-green-300">Eres el propietario de este CoreMiner</span>
+                  <span className="text-sm text-green-300">
+                    Eres el propietario de este CoreMiner
+                  </span>
                 </div>
               </Card>
             )}
@@ -153,13 +183,14 @@ export default function CoreMinerDetailPage() {
               <h2 className="text-xl font-semibold mb-4">Atributos</h2>
               <div className="space-y-2">
                 {metadata.attributes.map((attr, idx) => (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     className="flex justify-between items-center bg-gray-900/50 p-3 rounded hover:bg-gray-900 transition-colors"
                   >
                     <span className="text-gray-400">{attr.trait_type}</span>
                     <span className="font-semibold text-white">
-                      {typeof attr.value === 'number' && attr.display_type === 'number'
+                      {typeof attr.value === "number" &&
+                      attr.display_type === "number"
                         ? attr.value.toLocaleString()
                         : attr.value}
                     </span>
@@ -174,7 +205,10 @@ export default function CoreMinerDetailPage() {
                 <Button className="flex-1 bg-blue-600 hover:bg-blue-700">
                   Stakear
                 </Button>
-                <Button variant="outline" className="flex-1 border-gray-600 hover:bg-gray-800">
+                <Button
+                  variant="outline"
+                  className="flex-1 border-gray-600 hover:bg-gray-800"
+                >
                   Transferir
                 </Button>
               </div>
@@ -182,9 +216,11 @@ export default function CoreMinerDetailPage() {
 
             {/* External Links */}
             <Card className="p-4 bg-gray-800/50 border-gray-700">
-              <h3 className="text-sm font-semibold mb-3 text-gray-400">Enlaces</h3>
+              <h3 className="text-sm font-semibold mb-3 text-gray-400">
+                Enlaces
+              </h3>
               <div className="space-y-2 text-sm">
-                <a 
+                <a
                   href={metadata.external_url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -193,8 +229,8 @@ export default function CoreMinerDetailPage() {
                   <span>Ver en ScorchCore</span>
                   <span>→</span>
                 </a>
-                <a 
-                  href={`https://gateway.pinata.cloud/ipfs/${metadata.animation_url.replace('ipfs://', '').split('/')[0]}`}
+                <a
+                  href={`https://gateway.pinata.cloud/ipfs/${metadata.animation_url.replace("ipfs://", "").split("/")[0]}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between text-blue-400 hover:text-blue-300 transition-colors"
@@ -202,7 +238,7 @@ export default function CoreMinerDetailPage() {
                   <span>Ver metadata en IPFS</span>
                   <span>→</span>
                 </a>
-                <a 
+                <a
                   href={`https://saigon-app.roninchain.com/token/${process.env.NEXT_PUBLIC_COREMINER_NFT_ADDRESS}/${tokenId}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -224,7 +260,7 @@ export default function CoreMinerDetailPage() {
                 <div>
                   <div className="text-gray-500 mb-1">Contract</div>
                   <div className="font-mono text-white text-xs truncate">
-                    {process.env.NEXT_PUBLIC_COREMINER_NFT_ADDRESS || 'N/A'}
+                    {process.env.NEXT_PUBLIC_COREMINER_NFT_ADDRESS || "N/A"}
                   </div>
                 </div>
               </div>
@@ -238,7 +274,8 @@ export default function CoreMinerDetailPage() {
           <Card className="p-6 bg-gray-800 border-gray-700">
             <h2 className="text-2xl font-bold mb-4">Historial de Minería</h2>
             <p className="text-gray-400">
-              Próximamente: Historial de rewards, ciclos de minería, y estadísticas detalladas.
+              Próximamente: Historial de rewards, ciclos de minería, y
+              estadísticas detalladas.
             </p>
           </Card>
         </div>

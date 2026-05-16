@@ -1,30 +1,33 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/user/useWallet';
-import { HalvingCountdown } from '@/components/emission/HalvingCountdown';
-import { BuyBackDashboard } from '@/components/buyback/BuyBackDashboard';
-import { TokenPriceCard, TokenConverterWidget } from '@/components/price';
-import { useEmissionSchedule } from '@/lib/hooks/economy/useEmissionSchedule';
-import { Loading } from '@/components/ui';
-import { EmissionScheduleCard } from '@/components/emission';
+export const dynamic = "force-dynamic";
+
+import React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useWallet } from "@/lib/hooks/user/useWallet";
+import { HalvingCountdown } from "@/components/emission/HalvingCountdown";
+import { BuyBackDashboard } from "@/components/buyback/BuyBackDashboard";
+import { TokenPriceCard, TokenConverterWidget } from "@/components/price";
+import { useEmissionSchedule } from "@/lib/hooks/economy/useEmissionSchedule";
+import { Loading } from "@/components/ui";
+import { EmissionScheduleCard } from "@/components/emission";
 
 export default function EconomyPage() {
   const router = useRouter();
   const { isConnected } = useWallet();
-  const { info: emissionInfo, isLoading: emissionLoading } = useEmissionSchedule();
+  const { info: emissionInfo, isLoading: emissionLoading } =
+    useEmissionSchedule();
 
   // Redirect si no está conectado (con delay)
   React.useEffect(() => {
     if (!isConnected) {
       const timer = setTimeout(() => {
         if (!isConnected) {
-          router.push('/');
+          router.push("/");
         }
       }, 1000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [isConnected, router]);
@@ -42,7 +45,10 @@ export default function EconomyPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/" className="text-blue-400 hover:text-blue-300 flex items-center gap-2 mb-4">
+          <Link
+            href="/"
+            className="text-blue-400 hover:text-blue-300 flex items-center gap-2 mb-4"
+          >
             ← Volver al Dashboard
           </Link>
           <h1 className="text-4xl font-bold mb-2">📈 Economía del Proyecto</h1>

@@ -1,26 +1,36 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useWallet } from '@/lib/hooks/user/useWallet';
-import { useRecipes, useAdminRole } from '@/lib/hooks/economy/useRecipes';
-import { Loading, Button, Badge } from '@/components/ui';
-import { RecipeManagerTable } from '@/components/recipe/RecipeManagerTable';
-import { AddRecipeModal } from '@/components/recipe/AddRecipeModal';
-import Link from 'next/link';
+export const dynamic = "force-dynamic";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useWallet } from "@/lib/hooks/user/useWallet";
+import { useRecipes, useAdminRole } from "@/lib/hooks/economy/useRecipes";
+import { Loading, Button, Badge } from "@/components/ui";
+import { RecipeManagerTable } from "@/components/recipe/RecipeManagerTable";
+import { AddRecipeModal } from "@/components/recipe/AddRecipeModal";
+import Link from "next/link";
 
 export default function RecipesAdminPage() {
   const router = useRouter();
   const { address, isConnected } = useWallet();
   const { isAdmin, isLoading: isLoadingAdmin } = useAdminRole();
-  const { recipes, stats, isLoading, refresh, setRecipe, toggleRecipe, isSaving } = useRecipes();
-  
+  const {
+    recipes,
+    stats,
+    isLoading,
+    refresh,
+    setRecipe,
+    toggleRecipe,
+    isSaving,
+  } = useRecipes();
+
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Redirect si no está conectado
   React.useEffect(() => {
     if (!isConnected) {
-      router.push('/');
+      router.push("/");
     }
   }, [isConnected, router]);
 
@@ -38,7 +48,9 @@ export default function RecipesAdminPage() {
       <div className="min-h-screen bg-black text-white p-8">
         <div className="container mx-auto max-w-2xl">
           <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-8 text-center">
-            <h1 className="text-2xl font-bold text-red-400 mb-4">🚫 Acceso Denegado</h1>
+            <h1 className="text-2xl font-bold text-red-400 mb-4">
+              🚫 Acceso Denegado
+            </h1>
             <p className="text-gray-300 mb-6">
               No tienes permisos de administrador para acceder a esta página.
             </p>
@@ -56,7 +68,10 @@ export default function RecipesAdminPage() {
       <div className="container mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/dashboard" className="text-blue-400 hover:text-blue-300 flex items-center gap-2 mb-4">
+          <Link
+            href="/dashboard"
+            className="text-blue-400 hover:text-blue-300 flex items-center gap-2 mb-4"
+          >
             ← Volver al Dashboard
           </Link>
           <div className="flex items-center justify-between">
@@ -85,11 +100,15 @@ export default function RecipesAdminPage() {
             </div>
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
               <div className="text-sm text-gray-400 mb-1">Activas</div>
-              <div className="text-3xl font-bold text-green-400">{stats.active}</div>
+              <div className="text-3xl font-bold text-green-400">
+                {stats.active}
+              </div>
             </div>
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
               <div className="text-sm text-gray-400 mb-1">Inactivas</div>
-              <div className="text-3xl font-bold text-orange-400">{stats.inactive}</div>
+              <div className="text-3xl font-bold text-orange-400">
+                {stats.inactive}
+              </div>
             </div>
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
               <div className="text-sm text-gray-400 mb-1">Por Categoría</div>
@@ -121,7 +140,7 @@ export default function RecipesAdminPage() {
                 recipe.category,
                 recipe.minerType,
                 recipe.minerIndex,
-                true
+                true,
               );
             }}
             onRefresh={refresh}
@@ -139,7 +158,7 @@ export default function RecipesAdminPage() {
               data.minerType,
               data.minerIndex,
               data.maxSupply,
-              data.isActive
+              data.isActive,
             );
             if (result.success) {
               setShowAddModal(false);
