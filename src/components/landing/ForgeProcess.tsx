@@ -343,7 +343,7 @@ export default function ForgeProcess() {
               height={assets.comparison.height}
               className="forge-process-comparison-image h-auto w-full object-contain"
             />
-            <div className="forge-process-burn-copy absolute left-[21%] top-[30%] z-[2] w-[27%] -translate-y-1/2 text-center">
+            <div className="forge-process-burn-copy absolute left-[21%] top-[30%] z-2 w-[27%] -translate-y-1/2 text-center">
               <h3 className="alchemy-heading text-lg leading-none xl:text-xl">
                 Burn-to-Void
               </h3>
@@ -351,7 +351,7 @@ export default function ForgeProcess() {
                 (Destruction)
               </p>
             </div>
-            <div className="forge-process-transmute-copy absolute left-[56%] top-[30%] z-[2] w-[32%] -translate-y-1/2 text-center">
+            <div className="forge-process-transmute-copy absolute left-[56%] top-[30%] z-2 w-[32%] -translate-y-1/2 text-center">
               <h3 className="alchemy-heading-strong text-lg leading-none xl:text-xl">
                 Forge-to-Reactivate
               </h3>
@@ -384,7 +384,7 @@ export default function ForgeProcess() {
       </div>
 
       <div className="forge-process-stage sticky top-0 hidden h-screen overflow-hidden md:block">
-        <div className="forge-process-machine absolute inset-0 z-[4]">
+        <div className="forge-process-machine absolute inset-0 z-4">
           <Image
             src={assets.input.src}
             alt=""
@@ -459,7 +459,7 @@ export default function ForgeProcess() {
           />
         </div>
 
-        <div className="forge-process-card absolute bottom-[7vh] left-1/2 z-[8] w-[min(40vw,475px)] -translate-x-1/2">
+        <div className="forge-process-card absolute bottom-[7vh] left-1/2 z-8 w-[min(40vw,475px)] -translate-x-1/2">
           <Image
             src={assets.cardFrame.src}
             alt=""
@@ -482,7 +482,7 @@ export default function ForgeProcess() {
           ))}
         </div>
 
-        <div className="forge-process-closing absolute left-1/2 top-[10vh] z-[8] w-[min(78vw,680px)] -translate-x-1/2 text-center">
+        <div className="forge-process-closing absolute left-1/2 top-[10vh] z-8 w-[min(78vw,680px)] -translate-x-1/2 text-center">
           <p className="alchemy-eyebrow mb-3 text-xs">Forge-to-Reactivate</p>
           <h2 className="alchemy-heading-strong text-2xl leading-tight xl:text-3xl">
             A circular economy powered by transmutation, not destruction.
@@ -491,7 +491,7 @@ export default function ForgeProcess() {
       </div>
 
       <div className="forge-process-mobile relative md:hidden">
-        <div className="relative z-[2] px-5 py-20">
+        <div className="relative z-2 px-5 py-20">
           <div className="mb-16 text-center">
             <div className="forge-process-comparison mx-auto mb-6 w-full">
               <Image
@@ -502,7 +502,7 @@ export default function ForgeProcess() {
                 height={assets.comparison.height}
                 className="forge-process-comparison-image h-auto w-full object-contain"
               />
-              <div className="absolute left-[21%] top-[47%] z-[2] w-[27%] -translate-y-1/2 text-center">
+              <div className="absolute left-[21%] top-[47%] z-2 w-[27%] -translate-y-1/2 text-center">
                 <h3 className="alchemy-heading text-[0.58rem] leading-none">
                   Burn-to-Void
                 </h3>
@@ -510,7 +510,7 @@ export default function ForgeProcess() {
                   (Destruction)
                 </p>
               </div>
-              <div className="absolute left-[54%] top-[47%] z-[2] w-[32%] -translate-y-1/2 text-center">
+              <div className="absolute left-[54%] top-[47%] z-2 w-[32%] -translate-y-1/2 text-center">
                 <h3 className="alchemy-heading-strong text-[0.58rem] leading-none">
                   Forge-to-Reactivate
                 </h3>
