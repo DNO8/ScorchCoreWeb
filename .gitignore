@@ -42,5 +42,6 @@ next-env.d.ts
 # MD
 ANALISIS_COHERENCIA_PROYECTO.md
 
-# Videos served from IPFS - do not include in repo
+# Videos and thumbnails served from IPFS - do not include in repo
 public/**/*.mp4
+public/**/miners-thumbnails/**
