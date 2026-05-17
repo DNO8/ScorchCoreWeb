@@ -1,4 +1,7 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "VERCEL_PRERENDER_METADATA_BOUNDARY=1 pnpm run build"
+  "build": {
+    "env": {
+      "VERCEL_PRERENDER_METADATA_BOUNDARY": "1"
+    }
+  }
 }
