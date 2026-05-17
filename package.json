@@ -4,11 +4,11 @@
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
