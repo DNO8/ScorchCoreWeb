@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
+
 import { Cinzel_Decorative, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import LoaderWrapper from "@/components/landing/LoaderWrapper";
