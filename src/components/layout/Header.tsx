@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui";
 import { ConnectWallet } from "@/components/wallet";
 import { useWallet } from "@/lib/hooks/user/useWallet";
+import { PUBLIC_NAV_ITEMS } from "@/lib/constants/routes";
 
 export const Header: React.FC = () => {
   const { isConnected } = useWallet();
@@ -16,7 +17,7 @@ export const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const navLinks = [
+  const appLinks = [
     { href: "/dashboard", label: "Dashboard", icon: "🏠" },
     { href: "/forge", label: "Forge", icon: "🔥" },
     { href: "/inventory", label: "Inventory", icon: "📦" },
@@ -45,10 +46,26 @@ export const Header: React.FC = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        {isConnected && (
-          <>
-            <nav className="hidden lg:flex items-center gap-1">
-              {navLinks.slice(0, 4).map((link) => (
+        <nav className="hidden lg:flex items-center gap-1">
+          {/* Public Links - always visible */}
+          {PUBLIC_NAV_ITEMS.map((link) => (
+            <Link key={link.href} href={link.href}>
+              <Button
+                variant={pathname === link.href ? "primary" : "ghost"}
+                size="sm"
+                className="text-sm"
+              >
+                <span className="mr-1">{link.icon}</span>
+                {link.label}
+              </Button>
+            </Link>
+          ))}
+
+          {/* App Links - only when connected */}
+          {isConnected && (
+            <>
+              <div className="mx-2 h-6 w-px bg-gray-700" />
+              {appLinks.slice(0, 4).map((link) => (
                 <Link key={link.href} href={link.href}>
                   <Button
                     variant={pathname === link.href ? "primary" : "ghost"}
@@ -79,12 +96,12 @@ export const Header: React.FC = () => {
                   <>
                     <button
                       type="button"
-                      aria-label="Cerrar menú"
+                      aria-label="Close menu"
                       className="fixed inset-0 z-40"
                       onClick={() => setIsDropdownOpen(false)}
                     />
                     <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50">
-                      {navLinks.slice(4).map((link) => (
+                      {appLinks.slice(4).map((link, idx) => (
                         <Link
                           key={link.href}
                           href={link.href}
@@ -93,8 +110,8 @@ export const Header: React.FC = () => {
                             pathname === link.href
                               ? "text-orange-400 bg-gray-800/50"
                               : "text-gray-300"
-                          } ${link.href === navLinks[4].href ? "rounded-t-lg" : ""} ${
-                            link.href === navLinks[navLinks.length - 1].href
+                          } ${idx === 0 ? "rounded-t-lg" : ""} ${
+                            idx === appLinks.slice(4).length - 1
                               ? "rounded-b-lg"
                               : "border-b border-gray-800"
                           }`}
@@ -107,35 +124,41 @@ export const Header: React.FC = () => {
                   </>
                 )}
               </div>
-            </nav>
+            </>
+          )}
+        </nav>
 
-            {/* Mobile Menu Button */}
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors"
-            >
-              {isMobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-          </>
-        )}
+        {/* Right side: Wallet + Mobile toggle */}
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:block">
+            <ConnectWallet />
+          </div>
 
-        {/* Wallet Connection */}
-        <div className="hidden lg:flex items-center gap-3">
-          <ConnectWallet />
+          {/* Mobile Menu Button - always visible */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isConnected && isMobileMenuOpen && (
+      {/* Mobile Menu - always available */}
+      {isMobileMenuOpen && (
         <div className="lg:hidden border-t border-gray-800 bg-black">
           <nav className="container mx-auto px-4 py-4">
+            {/* Public Links */}
             <div className="space-y-1">
-              {navLinks.map((link) => (
+              <p className="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Learn
+              </p>
+              {PUBLIC_NAV_ITEMS.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -151,6 +174,32 @@ export const Header: React.FC = () => {
                 </Link>
               ))}
             </div>
+
+            {/* App Links - only when connected */}
+            {isConnected && (
+              <div className="mt-4 pt-4 border-t border-gray-800 space-y-1">
+                <p className="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  App
+                </p>
+                {appLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      pathname === link.href
+                        ? "bg-orange-500/10 text-orange-400"
+                        : "text-gray-300 hover:bg-gray-800"
+                    }`}
+                  >
+                    <span className="text-xl">{link.icon}</span>
+                    <span className="font-medium">{link.label}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Wallet */}
             <div className="mt-4 pt-4 border-t border-gray-800">
               <ConnectWallet />
             </div>
