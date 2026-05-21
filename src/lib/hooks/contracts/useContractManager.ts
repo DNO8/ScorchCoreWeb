@@ -1,15 +1,15 @@
 /**
  * Hook para acceder al ContractManager singleton
- * 
+ *
  * Proporciona acceso centralizado a todos los contratos de forma reactiva.
  * Se actualiza cuando cambia la red o el signer del usuario.
- * 
+ *
  * @category Core
  * @example
  * ```tsx
  * function MyComponent() {
  *   const contractManager = useContractManager();
- *   
+ *
  *   useEffect(() => {
  *     const forgeContract = contractManager.getForgeFactory();
  *     // Usar contrato...
@@ -18,18 +18,21 @@
  * ```
  */
 
-import { useMemo, useState, useEffect } from 'react';
-import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
-import { BrowserProvider, JsonRpcProvider } from 'ethers';
-import type { JsonRpcSigner } from 'ethers';
-import { ContractManager } from '@/lib/contracts/ContractManager';
-import type { ContractManagerConfig } from '@/lib/contracts/ContractManager';
+import { useMemo, useState, useEffect } from "react";
+import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { BrowserProvider, JsonRpcProvider } from "ethers";
+import type { JsonRpcSigner } from "ethers";
+import { ContractManager } from "@/lib/contracts/ContractManager";
+import type { ContractManagerConfig } from "@/lib/contracts/ContractManager";
 
 /**
  * Hook que proporciona la instancia singleton de ContractManager
  * Se actualiza reactivamente cuando cambia la chain o wallet
  */
-export function useContractManager(): { contractManager: ContractManager; signer: JsonRpcSigner | undefined } {
+export function useContractManager(): {
+  contractManager: ContractManager;
+  signer: JsonRpcSigner | undefined;
+} {
   const { chain, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -44,12 +47,12 @@ export function useContractManager(): { contractManager: ContractManager; signer
         try {
           const browserProvider = new BrowserProvider(walletClient.transport);
           const resolvedSigner = await browserProvider.getSigner();
-          
+
           if (!cancelled) {
             setSigner(resolvedSigner);
           }
         } catch (error) {
-          console.error('❌ [useContractManager] Failed to get signer:', error);
+          console.error("❌ [useContractManager] Failed to get signer:", error);
           if (!cancelled) {
             setSigner(undefined);
           }
@@ -87,32 +90,32 @@ export function useContractManager(): { contractManager: ContractManager; signer
       // Detectar chainId desde RPC URL si no está disponible desde wagmi
       let chainIdToUse = chain?.id;
       let chainName = chain?.name;
-      
+
       if (!chainIdToUse) {
-        const rpcUrl = publicClient.transport.url || '';
-        if (rpcUrl.includes('saigon')) {
-          chainIdToUse = 2021;
-          chainName = 'Ronin Testnet';
-        } else if (rpcUrl.includes('api.roninchain.com')) {
+        const rpcUrl = publicClient.transport.url || "";
+        if (rpcUrl.includes("saigon")) {
+          chainIdToUse = 202601;
+          chainName = "Ronin Testnet";
+        } else if (rpcUrl.includes("api.roninchain.com")) {
           chainIdToUse = 2020;
-          chainName = 'Ronin Mainnet';
+          chainName = "Ronin Mainnet";
         } else {
-          chainIdToUse = 2021; // Fallback to testnet
-          chainName = 'Ronin Testnet';
+          chainIdToUse = 202601; // Fallback to testnet
+          chainName = "Ronin Testnet";
         }
       }
-      
+
       detectedChainId = chainIdToUse;
-      
+
       // Crear provider de ethers desde public client de viem
       provider = new JsonRpcProvider(publicClient.transport.url, {
         chainId: chainIdToUse,
-        name: chainName || 'Ronin',
+        name: chainName || "Ronin",
       });
     }
 
     // Usar el chainId detectado o el de la chain
-    const finalChainId = detectedChainId || chain?.id || 2021;
+    const finalChainId = detectedChainId || chain?.id || 202601;
     const config: ContractManagerConfig = {
       provider,
       signer,

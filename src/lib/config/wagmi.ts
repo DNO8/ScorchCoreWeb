@@ -5,7 +5,7 @@ import { roninWallet, waypoint } from "@sky-mavis/tanto-wagmi";
 // Waypoint configuration
 const waypointConfig = {
   clientId: process.env.NEXT_PUBLIC_WAYPOINT_CLIENT_ID || "",
-  chainId: 2021, // Default to testnet saigon.id,
+  chainId: saigon.id, // Use viem's chain definition (202601 for current Saigon testnet)
 };
 
 // Type assertion needed due to wagmi v2.19+ type changes

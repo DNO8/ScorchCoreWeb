@@ -3,7 +3,7 @@
  * Actualizado: 27 Enero 2026
  */
 
-export const RONIN_TESTNET_CHAIN_ID = 2021;
+export const RONIN_TESTNET_CHAIN_ID = 202601;
 export const RONIN_MAINNET_CHAIN_ID = 2020;
 
 // ========== NUEVOS CONTRATOS (27-Ene-2026) ==========

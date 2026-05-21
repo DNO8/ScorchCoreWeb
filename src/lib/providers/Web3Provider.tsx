@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import { WagmiProvider } from 'wagmi';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { config } from '@/lib/config/wagmi';
-import { waypointService } from '@/lib/services/waypoint';
-import { createServiceLogger } from '@/lib/utils/logging/logger';
+import React, { useEffect } from "react";
+import { WagmiProvider } from "wagmi";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { config } from "@/lib/config/wagmi";
+import { waypointService } from "@/lib/services/waypoint";
+import { createServiceLogger } from "@/lib/utils/logging/logger";
 
-const log = createServiceLogger('Web3Provider');
+const log = createServiceLogger("Web3Provider");
 
 /**
  * Web3 Provider - Arquitectura de Capas
- * 
+ *
  * ARQUITECTURA:
  * ┌─────────────────────┐
  * │  Ronin Waypoint     │  ← CAPA 1: Core/Obligatorio (Source of Truth)
@@ -31,12 +31,12 @@ const log = createServiceLogger('Web3Provider');
  *       ┌────────┐
  *       │  App   │
  *       └────────┘
- * 
+ *
  * FLUJO:
  * 1. Waypoint se inicializa primero (source of truth)
  * 2. wagmi envuelve el provider de Waypoint (optional layer)
  * 3. App consume ambas capas según necesidad
- * 
+ *
  * @see WAYPOINT-MIGRATION.md para detalles de arquitectura
  */
 
@@ -47,24 +47,26 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     // ═══════════════════════════════════════════════════════
     // CAPA 1: Inicializar Ronin Waypoint (CORE - Obligatorio)
     // ═══════════════════════════════════════════════════════
-    const clientId = process.env.NEXT_PUBLIC_WAYPOINT_CLIENT_ID || '';
-    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID) || 2021; // Saigon testnet
+    const clientId = process.env.NEXT_PUBLIC_WAYPOINT_CLIENT_ID || "";
+    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID) || 202601; // Saigon testnet
 
     if (clientId) {
       waypointService.initialize({
         clientId,
         chainId,
-        redirectUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+        redirectUrl:
+          typeof window !== "undefined" ? window.location.origin : undefined,
         popupCloseDelay: 4000,
       });
-      log.info('Ronin Waypoint SDK initialized successfully', {
+      log.info("Ronin Waypoint SDK initialized successfully", {
         chainId,
-        redirectUrl: typeof window !== 'undefined' ? window.location.origin : undefined
+        redirectUrl:
+          typeof window !== "undefined" ? window.location.origin : undefined,
       });
     } else {
-      log.warn('Waypoint SDK initialization failed - missing client ID', {
-        envVar: 'NEXT_PUBLIC_WAYPOINT_CLIENT_ID',
-        impact: 'Wallet connection will not work'
+      log.warn("Waypoint SDK initialization failed - missing client ID", {
+        envVar: "NEXT_PUBLIC_WAYPOINT_CLIENT_ID",
+        impact: "Wallet connection will not work",
       });
     }
   }, []);
@@ -76,9 +78,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
   // y proporciona hooks convenientes (useAccount, useBalance, etc.)
   return (
     <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </WagmiProvider>
   );
 }

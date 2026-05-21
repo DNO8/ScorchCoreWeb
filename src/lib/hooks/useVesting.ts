@@ -1,18 +1,21 @@
 /**
  * useVesting - React Hook para gestión de Vesting Schedules
- * 
+ *
  * @pattern Observer Pattern - React hooks con subscripción a cambios
  * @pattern Facade Pattern - Simplifica acceso a VestingService
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
-import { ContractManager } from '@/lib/contracts/ContractManager';
-import { createVestingService } from '@/lib/services/vesting';
-import type { VestingDashboard, VestingScheduleUI } from '@/lib/services/vesting';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { useState, useEffect, useCallback } from "react";
+import { useAccount } from "wagmi";
+import { ContractManager } from "@/lib/contracts/ContractManager";
+import { createVestingService } from "@/lib/services/vesting";
+import type {
+  VestingDashboard,
+  VestingScheduleUI,
+} from "@/lib/services/vesting";
+import { createServiceLogger } from "@/lib/utils/logger";
 
-const log = createServiceLogger('useVesting');
+const log = createServiceLogger("useVesting");
 
 export interface UseVestingReturn {
   // Estado
@@ -54,22 +57,22 @@ export function useVesting(): UseVestingReturn {
     setError(null);
 
     try {
-      log.info('Loading vesting dashboard', { address });
+      log.info("Loading vesting dashboard", { address });
 
-      const contractManager = ContractManager.getInstance({ chainId: 2021 });
+      const contractManager = ContractManager.getInstance({ chainId: 202601 });
       const vestingService = createVestingService(contractManager);
 
       const dashboardData = await vestingService.getUserDashboard(address);
       setDashboard(dashboardData);
 
-      log.info('Vesting dashboard loaded', {
+      log.info("Vesting dashboard loaded", {
         address,
         schedulesCount: dashboardData.schedules.length,
         totalReleasable: dashboardData.totalReleasableFormatted,
       });
     } catch (err) {
       const errorObj = err as Error;
-      log.error('Error loading vesting dashboard', { error: err });
+      log.error("Error loading vesting dashboard", { error: err });
       setError(errorObj);
       setDashboard(null);
     } finally {
@@ -86,31 +89,36 @@ export function useVesting(): UseVestingReturn {
 
   /**
    * Libera tokens de un schedule
-   * 
+   *
    * @param scheduleId - ID del schedule
    */
-  const release = useCallback(async (scheduleId: bigint) => {
-    if (!address) {
-      throw new Error('Wallet no conectada');
-    }
+  const release = useCallback(
+    async (scheduleId: bigint) => {
+      if (!address) {
+        throw new Error("Wallet no conectada");
+      }
 
-    try {
-      log.info('Releasing tokens from hook', {
-        scheduleId: scheduleId.toString(),
-      });
+      try {
+        log.info("Releasing tokens from hook", {
+          scheduleId: scheduleId.toString(),
+        });
 
-      const contractManager = ContractManager.getInstance({ chainId: 2021 });
-      const vestingService = createVestingService(contractManager);
+        const contractManager = ContractManager.getInstance({
+          chainId: 202601,
+        });
+        const vestingService = createVestingService(contractManager);
 
-      await vestingService.release(scheduleId);
+        await vestingService.release(scheduleId);
 
-      // Refrescar después de liberar
-      await loadVesting();
-    } catch (err) {
-      log.error('Error releasing tokens', { error: err });
-      throw err;
-    }
-  }, [address, loadVesting]);
+        // Refrescar después de liberar
+        await loadVesting();
+      } catch (err) {
+        log.error("Error releasing tokens", { error: err });
+        throw err;
+      }
+    },
+    [address, loadVesting],
+  );
 
   // Cargar información inicial
   useEffect(() => {
@@ -135,10 +143,11 @@ export function useVesting(): UseVestingReturn {
   const hasReleasable = (dashboard?.totalReleasable ?? 0n) > 0n;
   const totalReleasableAmount = dashboard?.totalReleasable ?? 0n;
   const activeCount = dashboard?.activeSchedulesCount ?? 0;
-  
+
   const nextUnlockSeconds = dashboard
-    ? createVestingService(ContractManager.getInstance({ chainId: 2021 }))
-        .calculateNextUnlock(dashboard.schedules)
+    ? createVestingService(
+        ContractManager.getInstance({ chainId: 202601 }),
+      ).calculateNextUnlock(dashboard.schedules)
     : 0;
 
   return {
@@ -157,7 +166,7 @@ export function useVesting(): UseVestingReturn {
 
 /**
  * Hook simplificado para obtener un schedule específico
- * 
+ *
  * @param scheduleId - ID del schedule
  * @returns Schedule con info calculada
  */
@@ -178,17 +187,20 @@ export function useVestingSchedule(scheduleId: bigint | undefined): {
     setIsLoading(true);
 
     try {
-      const contractManager = ContractManager.getInstance({ chainId: 2021 });
+      const contractManager = ContractManager.getInstance({ chainId: 202601 });
       const vestingService = createVestingService(contractManager);
 
       const scheduleData = await vestingService.getSchedule(scheduleId);
       setSchedule(scheduleData);
 
-      log.info('Schedule loaded', {
+      log.info("Schedule loaded", {
         scheduleId: scheduleId.toString(),
       });
     } catch (error) {
-      log.error('Error loading schedule', { scheduleId: scheduleId.toString(), error });
+      log.error("Error loading schedule", {
+        scheduleId: scheduleId.toString(),
+        error,
+      });
       setSchedule(null);
     } finally {
       setIsLoading(false);

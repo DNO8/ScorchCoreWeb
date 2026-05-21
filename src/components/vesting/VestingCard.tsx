@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { Clock, TrendingUp, Lock, CheckCircle, XCircle } from 'lucide-react';
-import { Card, Badge, Button } from '@/components/ui';
-import type { VestingScheduleUI } from '@/lib/services/vesting';
-import { createVestingService } from '@/lib/services/vesting';
-import { ContractManager } from '@/lib/contracts/ContractManager';
+import { Clock, TrendingUp, Lock, CheckCircle, XCircle } from "lucide-react";
+import { Card, Badge, Button } from "@/components/ui";
+import type { VestingScheduleUI } from "@/lib/services/vesting";
+import { createVestingService } from "@/lib/services/vesting";
+import { ContractManager } from "@/lib/contracts/ContractManager";
 
 interface VestingCardProps {
   schedule: VestingScheduleUI;
@@ -14,13 +14,13 @@ interface VestingCardProps {
 
 /**
  * Card individual para un vesting schedule
- * 
+ *
  * @pattern Presentation Component - UI con lógica mínima
  */
 export function VestingCard({
   schedule,
   onRelease,
-  className = '',
+  className = "",
 }: VestingCardProps) {
   const {
     scheduleId,
@@ -37,7 +37,9 @@ export function VestingCard({
     duration,
   } = schedule;
 
-  const vestingService = createVestingService(ContractManager.getInstance({ chainId: 2021 }));
+  const vestingService = createVestingService(
+    ContractManager.getInstance({ chainId: 202601 }),
+  );
   const startDate = vestingService.formatDate(startTime);
   const durationStr = vestingService.formatDuration(Number(duration));
   const timeRemainingStr = vestingService.formatDuration(timeRemainingSeconds);
@@ -118,27 +120,29 @@ export function VestingCard({
 
         <div className="p-3 bg-black/40 rounded-lg">
           <div className="text-xs text-gray-400 mb-1">Ya Vested</div>
-          <div className="font-bold text-green-400">{vestedAmountFormatted}</div>
+          <div className="font-bold text-green-400">
+            {vestedAmountFormatted}
+          </div>
         </div>
 
         <div className="p-3 bg-black/40 rounded-lg">
           <div className="text-xs text-gray-400 mb-1">Disponible</div>
-          <div className="font-bold text-blue-400">{releasableAmountFormatted}</div>
+          <div className="font-bold text-blue-400">
+            {releasableAmountFormatted}
+          </div>
         </div>
 
         <div className="p-3 bg-black/40 rounded-lg">
           <div className="text-xs text-gray-400 mb-1">Restante</div>
-          <div className="font-bold text-purple-400">{remainingAmountFormatted}</div>
+          <div className="font-bold text-purple-400">
+            {remainingAmountFormatted}
+          </div>
         </div>
       </div>
 
       {/* Release Button */}
       {canRelease && !revoked && (
-        <Button
-          onClick={onRelease}
-          className="w-full"
-          variant="primary"
-        >
+        <Button onClick={onRelease} className="w-full" variant="primary">
           <TrendingUp className="w-4 h-4" />
           Liberar {releasableAmountFormatted}
         </Button>

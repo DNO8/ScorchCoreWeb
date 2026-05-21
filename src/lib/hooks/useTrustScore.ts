@@ -1,19 +1,22 @@
 /**
  * useTrustScore - React Hook para gestión de TrustScore
- * 
+ *
  * @pattern Observer Pattern - React hooks con subscripción a cambios
  * @pattern Facade Pattern - Simplifica acceso a TrustScoreService
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAccount } from 'wagmi';
-import type { Address } from 'viem';
-import { ContractManager } from '@/lib/contracts/ContractManager';
-import { createTrustScoreService } from '@/lib/services/trustscore';
-import type { TrustScoreUIInfo, TrustScoreLevel } from '@/lib/services/trustscore';
-import { createServiceLogger } from '@/lib/utils/logger';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useAccount } from "wagmi";
+import type { Address } from "viem";
+import { ContractManager } from "@/lib/contracts/ContractManager";
+import { createTrustScoreService } from "@/lib/services/trustscore";
+import type {
+  TrustScoreUIInfo,
+  TrustScoreLevel,
+} from "@/lib/services/trustscore";
+import { createServiceLogger } from "@/lib/utils/logger";
 
-const log = createServiceLogger('useTrustScore');
+const log = createServiceLogger("useTrustScore");
 
 export interface UseTrustScoreReturn {
   // Estado
@@ -40,7 +43,9 @@ export interface UseTrustScoreReturn {
  */
 export function useTrustScore(): UseTrustScoreReturn {
   const { address, isConnected } = useAccount();
-  const [trustScoreInfo, setTrustScoreInfo] = useState<TrustScoreUIInfo | null>(null);
+  const [trustScoreInfo, setTrustScoreInfo] = useState<TrustScoreUIInfo | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -57,25 +62,25 @@ export function useTrustScore(): UseTrustScoreReturn {
     setError(null);
 
     try {
-      log.info('Loading trust score', { address });
+      log.info("Loading trust score", { address });
 
-      const contractManager = ContractManager.getInstance({ chainId: 2021 });
-      
+      const contractManager = ContractManager.getInstance({ chainId: 202601 });
+
       // Validar que hay provider disponible
       const provider = contractManager.getProvider();
       if (!provider) {
-        log.warn('No provider available, skipping trust score load');
+        log.warn("No provider available, skipping trust score load");
         setTrustScoreInfo(null);
         setIsLoading(false);
         return;
       }
-      
+
       const trustScoreService = createTrustScoreService(contractManager);
 
       const info = await trustScoreService.getUserTrustScoreInfo(address);
       setTrustScoreInfo(info);
 
-      log.info('Trust score loaded', {
+      log.info("Trust score loaded", {
         address,
         score: info.score,
         level: info.level,
@@ -83,7 +88,7 @@ export function useTrustScore(): UseTrustScoreReturn {
       });
     } catch (err) {
       const errorObj = err as Error;
-      log.error('Error loading trust score', { address, error: err });
+      log.error("Error loading trust score", { address, error: err });
       setError(errorObj);
       setTrustScoreInfo(null);
     } finally {
@@ -100,7 +105,7 @@ export function useTrustScore(): UseTrustScoreReturn {
 
   /**
    * Verifica si el usuario puede acceder a una categoría
-   * 
+   *
    * @param categoryLevel - Nivel de la categoría (0-3)
    * @returns true si tiene acceso
    */
@@ -109,7 +114,7 @@ export function useTrustScore(): UseTrustScoreReturn {
       if (!trustScoreInfo) return false;
       return trustScoreInfo.level >= categoryLevel;
     },
-    [trustScoreInfo]
+    [trustScoreInfo],
   );
 
   // Cargar información inicial y cuando cambie la wallet
@@ -121,9 +126,12 @@ export function useTrustScore(): UseTrustScoreReturn {
   useEffect(() => {
     if (!address || !isConnected) return;
 
-    const interval = setInterval(() => {
-      loadTrustScore();
-    }, 5 * 60 * 1000); // 5 minutos
+    const interval = setInterval(
+      () => {
+        loadTrustScore();
+      },
+      5 * 60 * 1000,
+    ); // 5 minutos
 
     return () => clearInterval(interval);
   }, [address, isConnected, loadTrustScore]);
@@ -133,17 +141,17 @@ export function useTrustScore(): UseTrustScoreReturn {
   const isFlagged = trustScoreInfo?.flagged ?? false;
   const isStale = trustScoreInfo?.isStale ?? true;
   const needsVerification = isStale || isFlagged;
-  const levelName = trustScoreInfo?.levelName ?? 'Basic';
+  const levelName = trustScoreInfo?.levelName ?? "Basic";
   const levelColor = useMemo(() => {
-    if (!trustScoreInfo) return 'gray';
-    const contractManager = ContractManager.getInstance({ chainId: 2021 });
+    if (!trustScoreInfo) return "gray";
+    const contractManager = ContractManager.getInstance({ chainId: 202601 });
     const trustScoreService = createTrustScoreService(contractManager);
     return trustScoreService.getLevelColor(trustScoreInfo.level);
   }, [trustScoreInfo]);
-  
+
   const formattedScore = useMemo(() => {
-    if (!trustScoreInfo) return '0/1000';
-    const contractManager = ContractManager.getInstance({ chainId: 2021 });
+    if (!trustScoreInfo) return "0/1000";
+    const contractManager = ContractManager.getInstance({ chainId: 202601 });
     const trustScoreService = createTrustScoreService(contractManager);
     return trustScoreService.formatScore(trustScoreInfo.score);
   }, [trustScoreInfo]);
@@ -166,7 +174,7 @@ export function useTrustScore(): UseTrustScoreReturn {
 
 /**
  * Hook simplificado para verificar si el usuario puede acceder a una categoría
- * 
+ *
  * @param categoryLevel - Nivel de categoría requerido
  * @returns true si el usuario tiene acceso
  */
@@ -182,6 +190,6 @@ export function useCanAccessCategory(categoryLevel: number): {
     canAccess: canAccessCategory(categoryLevel),
     isLoading,
     userLevel: trustScoreInfo?.level ?? 0,
-    levelName: trustScoreInfo?.levelName ?? 'Basic',
+    levelName: trustScoreInfo?.levelName ?? "Basic",
   };
 }

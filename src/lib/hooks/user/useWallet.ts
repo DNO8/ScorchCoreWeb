@@ -9,7 +9,7 @@
  * Features:
  * - Ronin Wallet via Waypoint SDK
  * - Balance automático en RON
- * - Soporte para Saigon Testnet (chainId: 2021)
+ * - Soporte para Saigon Testnet (chainId: 202601)
  * - Compatible con wagmi v2
  *
  * @category Core

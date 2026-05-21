@@ -266,7 +266,7 @@ export class NFTFacade {
       }
 
       // El contrato de Axie oficial solo existe en Mainnet (2020)
-      // En Testnet (2021) no existe, así que retornamos array vacío
+      // En Testnet (202601) no existe, así que retornamos array vacío
       const chainId = this.contractManager.getChainId();
       if (chainId !== 2020) {
         logger.info("Axie contract not available on testnet, skipping", {

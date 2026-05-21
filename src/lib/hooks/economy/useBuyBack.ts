@@ -1,18 +1,18 @@
 /**
  * useBuyBack - React Hook para gestión del BuyBack Fund
- * 
+ *
  * @pattern Observer Pattern - React hooks con subscripción a cambios
  * @pattern Facade Pattern - Simplifica acceso a BuyBackService
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
-import { ContractManager } from '@/lib/contracts/ContractManager';
-import { createBuyBackService } from '@/lib/services/buyback';
-import type { BuyBackDashboardInfo } from '@/lib/services/buyback';
-import { createServiceLogger } from '@/lib/utils/logging/logger';
+import { useState, useEffect, useCallback } from "react";
+import { useAccount } from "wagmi";
+import { ContractManager } from "@/lib/contracts/ContractManager";
+import { createBuyBackService } from "@/lib/services/buyback";
+import type { BuyBackDashboardInfo } from "@/lib/services/buyback";
+import { createServiceLogger } from "@/lib/utils/logging/logger";
 
-const log = createServiceLogger('useBuyBack');
+const log = createServiceLogger("useBuyBack");
 
 export interface UseBuyBackReturn {
   // Estado
@@ -48,21 +48,21 @@ export function useBuyBack(): UseBuyBackReturn {
     setError(null);
 
     try {
-      log.info('Loading BuyBack Fund info');
+      log.info("Loading BuyBack Fund info");
 
-      const contractManager = ContractManager.getInstance({ chainId: 2021 });
+      const contractManager = ContractManager.getInstance({ chainId: 202601 });
       const buyBackService = createBuyBackService(contractManager);
 
       const buyBackInfo = await buyBackService.getBuyBackInfo();
       setInfo(buyBackInfo);
 
-      log.info('BuyBack info loaded', {
+      log.info("BuyBack info loaded", {
         balance: buyBackInfo.balanceFormatted,
         totalBuybacks: buyBackInfo.totalBuybacks.toString(),
       });
     } catch (err) {
       const errorObj = err as Error;
-      log.error('Error loading BuyBack info', { error: err });
+      log.error("Error loading BuyBack info", { error: err });
       setError(errorObj);
       setInfo(null);
     } finally {
@@ -79,59 +79,69 @@ export function useBuyBack(): UseBuyBackReturn {
 
   /**
    * Ejecuta un buyback
-   * 
+   *
    * @param maxRonToSpend - Máximo RON a gastar
    */
-  const executeBuyback = useCallback(async (maxRonToSpend: bigint) => {
-    if (!address) {
-      throw new Error('Wallet no conectada');
-    }
+  const executeBuyback = useCallback(
+    async (maxRonToSpend: bigint) => {
+      if (!address) {
+        throw new Error("Wallet no conectada");
+      }
 
-    try {
-      log.info('Executing buyback from hook', {
-        maxRonToSpend: maxRonToSpend.toString(),
-      });
+      try {
+        log.info("Executing buyback from hook", {
+          maxRonToSpend: maxRonToSpend.toString(),
+        });
 
-      const contractManager = ContractManager.getInstance({ chainId: 2021 });
-      const buyBackService = createBuyBackService(contractManager);
+        const contractManager = ContractManager.getInstance({
+          chainId: 202601,
+        });
+        const buyBackService = createBuyBackService(contractManager);
 
-      await buyBackService.executeBuyback(maxRonToSpend);
+        await buyBackService.executeBuyback(maxRonToSpend);
 
-      // Refrescar después de ejecutar
-      await loadBuyBackInfo();
-    } catch (err) {
-      log.error('Error executing buyback', { error: err });
-      throw err;
-    }
-  }, [address, loadBuyBackInfo]);
+        // Refrescar después de ejecutar
+        await loadBuyBackInfo();
+      } catch (err) {
+        log.error("Error executing buyback", { error: err });
+        throw err;
+      }
+    },
+    [address, loadBuyBackInfo],
+  );
 
   /**
    * Deposita fondos al BuyBack Fund
-   * 
+   *
    * @param amount - Monto en RON (wei)
    */
-  const deposit = useCallback(async (amount: bigint) => {
-    if (!address) {
-      throw new Error('Wallet no conectada');
-    }
+  const deposit = useCallback(
+    async (amount: bigint) => {
+      if (!address) {
+        throw new Error("Wallet no conectada");
+      }
 
-    try {
-      log.info('Depositing from hook', {
-        amount: amount.toString(),
-      });
+      try {
+        log.info("Depositing from hook", {
+          amount: amount.toString(),
+        });
 
-      const contractManager = ContractManager.getInstance({ chainId: 2021 });
-      const buyBackService = createBuyBackService(contractManager);
+        const contractManager = ContractManager.getInstance({
+          chainId: 202601,
+        });
+        const buyBackService = createBuyBackService(contractManager);
 
-      await buyBackService.deposit(amount);
+        await buyBackService.deposit(amount);
 
-      // Refrescar después de depositar
-      await loadBuyBackInfo();
-    } catch (err) {
-      log.error('Error depositing', { error: err });
-      throw err;
-    }
-  }, [address, loadBuyBackInfo]);
+        // Refrescar después de depositar
+        await loadBuyBackInfo();
+      } catch (err) {
+        log.error("Error depositing", { error: err });
+        throw err;
+      }
+    },
+    [address, loadBuyBackInfo],
+  );
 
   // Cargar información inicial
   useEffect(() => {
