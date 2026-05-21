@@ -1,20 +1,30 @@
 /**
  * Ronin Waypoint Service
- * 
+ *
  * Servicio para gestionar la integración con Ronin Waypoint SDK oficial.
  * Encapsula WaypointProvider y proporciona una API limpia.
- * 
+ *
  * @see https://docs.skymavis.com/mavis/ronin-waypoint/reference/web-sdk/web-standard
- * 
+ *
  * @pattern Service Layer
  * @category Blockchain
  */
 
-import { WaypointProvider, authorize } from '@sky-mavis/waypoint';
-import { createServiceLogger } from '@/lib/utils/logging/logger';
-import type { WaypointConfig, WaypointConnectionResult } from './types';
+import {
+  WaypointProvider,
+  authorize,
+  VIEM_CHAIN_MAPPING,
+} from "@sky-mavis/waypoint";
+import { saigon } from "viem/chains";
+import { createServiceLogger } from "@/lib/utils/logging/logger";
+import type { WaypointConfig, WaypointConnectionResult } from "./types";
 
-const logger = createServiceLogger('WaypointService');
+// Inyectar la definición actual de Saigon (id: 202601) al mapping interno de Waypoint.
+// El SDK bundlea viem 2.9.2 que aún tiene saigon.id = 2021, causando el error
+// "Chain 202601 is not supported" en producción.
+VIEM_CHAIN_MAPPING[saigon.id] = saigon;
+
+const logger = createServiceLogger("WaypointService");
 
 /**
  * Servicio singleton para Ronin Waypoint
@@ -26,11 +36,11 @@ class WaypointService {
 
   initialize(config: WaypointConfig): void {
     if (this.isInitialized) {
-      logger.warn('WaypointService ya está inicializado');
+      logger.warn("WaypointService ya está inicializado");
       return;
     }
 
-    logger.info('Inicializando WaypointService', { chainId: config.chainId });
+    logger.info("Inicializando WaypointService", { chainId: config.chainId });
 
     this.config = config;
     this.provider = WaypointProvider.create({
@@ -40,78 +50,88 @@ class WaypointService {
     });
 
     this.isInitialized = true;
-    logger.info('WaypointService inicializado correctamente');
+    logger.info("WaypointService inicializado correctamente");
   }
 
   getProvider(): WaypointProvider {
     if (!this.provider) {
-      throw new Error('WaypointService no está inicializado. Llama a initialize() primero.');
+      throw new Error(
+        "WaypointService no está inicializado. Llama a initialize() primero.",
+      );
     }
     return this.provider;
   }
 
   async connect(): Promise<WaypointConnectionResult> {
     if (!this.provider) {
-      throw new Error('WaypointService no está inicializado');
+      throw new Error("WaypointService no está inicializado");
     }
 
     try {
-      logger.info('Conectando con Ronin Waypoint...');
-      
+      logger.info("Conectando con Ronin Waypoint...");
+
       const result = await this.provider.connect();
-      
-      logger.info('Conexión exitosa', { address: result.address });
-      
+
+      logger.info("Conexión exitosa", { address: result.address });
+
       return {
         address: result.address,
         success: true,
       };
     } catch (error) {
-      logger.error('Error al conectar con Waypoint', error);
+      logger.error("Error al conectar con Waypoint", error);
       throw error;
     }
   }
 
-  async authorizePopup(scopes: ('openid' | 'profile' | 'email' | 'wallet')[] = ['openid', 'wallet']) {
+  async authorizePopup(
+    scopes: ("openid" | "profile" | "email" | "wallet")[] = [
+      "openid",
+      "wallet",
+    ],
+  ) {
     if (!this.config) {
-      throw new Error('WaypointService no está inicializado');
+      throw new Error("WaypointService no está inicializado");
     }
 
     try {
-      logger.info('Autorizando con popup mode...', { scopes });
-      
+      logger.info("Autorizando con popup mode...", { scopes });
+
       const result = await authorize({
-        mode: 'popup',
+        mode: "popup",
         clientId: this.config.clientId,
         scopes: scopes as any,
       });
 
       if (result) {
-        logger.info('Autorización exitosa', { 
+        logger.info("Autorización exitosa", {
           address: result.address,
-          hasToken: !!result.token 
+          hasToken: !!result.token,
         });
       }
 
       return result;
     } catch (error) {
-      logger.error('Error en autorización popup', error);
+      logger.error("Error en autorización popup", error);
       throw error;
     }
   }
 
   authorizeRedirect(
-    scopes: ('openid' | 'profile' | 'email' | 'wallet')[] = ['openid', 'wallet'],
-    state?: string
+    scopes: ("openid" | "profile" | "email" | "wallet")[] = [
+      "openid",
+      "wallet",
+    ],
+    state?: string,
   ): void {
     if (!this.config) {
-      throw new Error('WaypointService no está inicializado');
+      throw new Error("WaypointService no está inicializado");
     }
 
-    logger.info('Iniciando autorización redirect...', { scopes, state });
+    logger.info("Iniciando autorización redirect...", { scopes, state });
 
     authorize({
-      mode: 'redirect',
+      mode: "redirect",
       clientId: this.config.clientId,
       redirectUrl: this.config.redirectUrl || window.location.origin,
       scopes: scopes as any,
@@ -121,7 +141,7 @@ class WaypointService {
 
   disconnect(): void {
     if (this.provider) {
-      logger.info('Desconectando de Waypoint...');
+      logger.info("Desconectando de Waypoint...");
       this.provider.disconnect();
     }
   }
@@ -138,7 +158,7 @@ class WaypointService {
     this.provider = null;
     this.config = null;
     this.isInitialized = false;
-    logger.info('WaypointService reset');
+    logger.info("WaypointService reset");
   }
 }
 
