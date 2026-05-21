@@ -1,6 +1,5 @@
 "use client";
 
-import { Header } from "@/components/layout";
 import { Card } from "@/components/ui";
 
 interface TeamMember {
@@ -13,10 +12,28 @@ interface TeamMember {
 
 const TEAM_MEMBERS: TeamMember[] = [
   {
-    name: "DNO",
-    role: "Founder & Lead Developer",
+    name: "Camilo Yonhson",
+    role: "Founder & CEO",
+    bio: "Visionary founder driving the strategic direction of ScorchCore Protocol. Educator in Web3, blockchain, and cryptocurrencies. Financial expert passionate about building thriving gaming economies and onboarding the next generation of blockchain users.",
+    avatar: "🚀",
+    links: [
+      {
+        label: "LinkedIn",
+        url: "https://www.linkedin.com/in/camilo-yonhson-cisternas-159451288/",
+      },
+    ],
+  },
+  {
+    name: "Danilo Contreras",
+    role: "CTO & Lead Developer",
     bio: "Full-stack blockchain developer with a passion for building sustainable gaming economies on Ronin. Architect of the ScorchCore Protocol.",
     avatar: "🧑‍💻",
+    links: [
+      {
+        label: "LinkedIn",
+        url: "https://www.linkedin.com/in/danilo-contreras-05597922b/",
+      },
+    ],
   },
 ];
 
@@ -48,17 +65,51 @@ const VALUES = [
 ];
 
 const MILESTONES = [
-  { phase: "Phase 1", title: "Foundation", items: ["Smart Contract Development", "Core Protocol Design", "Website & Landing Page", "Community Building"] },
-  { phase: "Phase 2", title: "Launch", items: ["Elemental Forge goes live", "CoreMiner NFT Minting", "$CORE Mining begins", "Marketplace Integration"] },
-  { phase: "Phase 3", title: "Expansion", items: ["Minigames (F2P)", "PvP Arena", "Scholarship System 2.0", "DAO Governance"] },
-  { phase: "Phase 4", title: "Evolution", items: ["Cross-chain expansion", "Mobile app", "Strategic partnerships", "Community-driven features"] },
+  {
+    phase: "Phase 1",
+    title: "Foundation",
+    items: [
+      "Smart Contract Development",
+      "Core Protocol Design",
+      "Website & Landing Page",
+      "Community Building",
+    ],
+  },
+  {
+    phase: "Phase 2",
+    title: "Launch",
+    items: [
+      "Elemental Forge goes live",
+      "CoreMiner NFT Minting",
+      "$CORE Mining begins",
+      "Marketplace Integration",
+    ],
+  },
+  {
+    phase: "Phase 3",
+    title: "Expansion",
+    items: [
+      "Minigames (F2P)",
+      "PvP Arena",
+      "Scholarship System 2.0",
+      "DAO Governance",
+    ],
+  },
+  {
+    phase: "Phase 4",
+    title: "Evolution",
+    items: [
+      "Cross-chain expansion",
+      "Mobile app",
+      "Strategic partnerships",
+      "Community-driven features",
+    ],
+  },
 ];
 
 export default function TeamPage() {
   return (
     <div className="min-h-screen bg-black text-white">
-      <Header />
-
       <main className="container mx-auto px-4 py-12">
         {/* Page Header */}
         <div className="max-w-3xl mx-auto text-center mb-16">
@@ -74,7 +125,11 @@ export default function TeamPage() {
         <section className="mb-16">
           <div className="max-w-4xl mx-auto grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {TEAM_MEMBERS.map((member) => (
-              <Card key={member.name} variant="glass" className="p-6 text-center">
+              <Card
+                key={member.name}
+                variant="glass"
+                className="p-6 text-center"
+              >
                 <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-800 border-2 border-orange-500/30 flex items-center justify-center">
                   <span className="text-4xl">{member.avatar}</span>
                 </div>
@@ -102,7 +157,10 @@ export default function TeamPage() {
             ))}
 
             {/* Hiring Card */}
-            <Card variant="bordered" className="p-6 text-center flex flex-col items-center justify-center">
+            <Card
+              variant="bordered"
+              className="p-6 text-center flex flex-col items-center justify-center"
+            >
               <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-800 border-2 border-dashed border-gray-600 flex items-center justify-center">
                 <span className="text-3xl text-gray-500">+</span>
               </div>

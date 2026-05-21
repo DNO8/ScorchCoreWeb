@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { Header } from "@/components/layout";
 import { Button } from "@/components/ui";
 
 interface ErrorProps {
@@ -17,7 +16,6 @@ export default function ErrorPage({ error, reset }: ErrorProps) {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <Header />
       <main className="flex flex-col items-center justify-center px-4 py-24">
         <div className="text-center max-w-md">
           <div className="text-8xl font-bold bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-transparent mb-6">

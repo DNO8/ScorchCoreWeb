@@ -6,6 +6,7 @@ import { Cinzel_Decorative, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import LoaderWrapper from "@/components/landing/LoaderWrapper";
 import { Web3Provider } from "@/lib/providers/Web3Provider";
+import { Header } from "@/components/layout";
 
 const cinzelDecorative = Cinzel_Decorative({
   subsets: ["latin"],
@@ -50,6 +51,7 @@ export default function RootLayout({
       >
         <Web3Provider>
           <LoaderWrapper />
+          <Header />
           {children}
         </Web3Provider>
       </body>

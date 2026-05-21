@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import ForgeProcess from "@/components/landing/ForgeProcess";
 import Hero from "@/components/landing/Hero";
 import Problem from "@/components/landing/Problem";
-import { Header } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
 import { useWallet } from "@/lib/hooks/user/useWallet";
 
@@ -27,11 +26,9 @@ export default function Home() {
 
   return (
     <div className="bg-black text-white">
-      <Header />
-
       {/* Banner temporal para usuarios conectados */}
       {showBanner && (
-        <div className="sticky top-16 z-30 bg-gradient-to-r from-orange-600 to-red-600 border-b border-orange-500 animate-in slide-in-from-top duration-300">
+        <div className="sticky top-16 z-30 bg-linear-to-r from-orange-600 to-red-600 border-b border-orange-500 animate-in slide-in-from-top duration-300">
           <div className="container mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -73,7 +70,7 @@ export default function Home() {
 
         <div className="relative z-10 container mx-auto px-4 text-center">
           <div style={{ opacity: Math.max(0, 1 - scrollY * 0.002), transform: `translateY(${scrollY * 0.5}px)` }}>
-            <h1 className="text-7xl md:text-9xl font-bold mb-6 bg-gradient-to-r from-orange-500 via-red-600 to-orange-500 bg-clip-text text-transparent">
+            <h1 className="text-7xl md:text-9xl font-bold mb-6 bg-linear-to-r from-orange-500 via-red-600 to-orange-500 bg-clip-text text-transparent">
               SÉ UN PROSPECTOR
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
@@ -96,7 +93,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-black via-gray-900 to-black opacity-95" />
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-5xl md:text-6xl font-bold mb-8 text-center bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+            <h2 className="text-5xl md:text-6xl font-bold mb-8 text-center bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
               El Eco Silencioso de Lunacia
             </h2>
             <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -140,7 +137,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-black via-orange-950/10 to-black" />
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-5xl md:text-6xl font-bold mb-12 text-center bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+            <h2 className="text-5xl md:text-6xl font-bold mb-12 text-center bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
               El Descubrimiento del ScorchCore
             </h2>
             <div className="mb-12">
@@ -207,7 +204,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-black via-red-950/10 to-black" />
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-5xl md:text-6xl font-bold mb-12 text-center bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+            <h2 className="text-5xl md:text-6xl font-bold mb-12 text-center bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
               El Laboratorio del Corazón Ardiente
             </h2>
             <Card variant="gradient" className="p-10 mb-12">
@@ -308,7 +305,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-black via-gray-900 to-black" />
         <div className="relative z-10 container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-5xl md:text-6xl font-bold mb-12 text-center bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+            <h2 className="text-5xl md:text-6xl font-bold mb-12 text-center bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
               ScorchCore Protocol
             </h2>
             <Card variant="gradient" className="p-10 mb-12 text-center">
@@ -420,7 +417,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-t from-orange-950/30 via-black to-black" />
         <div className="relative z-10 container mx-auto px-4 text-center">
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-6xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+            <h2 className="text-6xl md:text-7xl font-bold mb-8 bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
               El Núcleo Ardiente Espera
             </h2>
             <p className="text-2xl text-gray-300 mb-12">
