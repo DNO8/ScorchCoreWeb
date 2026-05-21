@@ -10,19 +10,9 @@
  * @category Blockchain
  */
 
-import {
-  WaypointProvider,
-  authorize,
-  VIEM_CHAIN_MAPPING,
-} from "@sky-mavis/waypoint";
-import { saigon } from "viem/chains";
+import { WaypointProvider, authorize } from "@sky-mavis/waypoint";
 import { createServiceLogger } from "@/lib/utils/logging/logger";
 import type { WaypointConfig, WaypointConnectionResult } from "./types";
-
-// Inyectar la definición actual de Saigon (id: 202601) al mapping interno de Waypoint.
-// El SDK bundlea viem 2.9.2 que aún tiene saigon.id = 2021, causando el error
-// "Chain 202601 is not supported" en producción.
-VIEM_CHAIN_MAPPING[saigon.id] = saigon;
 
 const logger = createServiceLogger("WaypointService");
 

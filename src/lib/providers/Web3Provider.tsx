@@ -48,7 +48,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     // CAPA 1: Inicializar Ronin Waypoint (CORE - Obligatorio)
     // ═══════════════════════════════════════════════════════
     const clientId = process.env.NEXT_PUBLIC_WAYPOINT_CLIENT_ID || "";
-    const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID) || 202601; // Saigon testnet
+    const chainId = 2021; // Waypoint SDK bundles viem 2.9.2 which only supports saigon.id = 2021
 
     if (clientId) {
       waypointService.initialize({
