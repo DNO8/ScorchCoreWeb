@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Cinzel_Decorative, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import LoaderWrapper from "@/components/landing/LoaderWrapper";
-import { Web3Provider } from "@/lib/providers/Web3Provider";
 import { Header } from "@/components/layout";
 
 const cinzelDecorative = Cinzel_Decorative({
@@ -48,11 +47,9 @@ export default function RootLayout({
       <body
         className={`${cinzelDecorative.variable} ${robotoMono.variable} font-sans antialiased bg-black`}
       >
-        <Web3Provider>
           <LoaderWrapper />
           <Header />
           {children}
-        </Web3Provider>
       </body>
     </html>
   );
