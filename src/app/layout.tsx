@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 
 import { Cinzel_Decorative, Roboto_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next"
 import "./globals.css";
 import LoaderWrapper from "@/components/landing/LoaderWrapper";
 import { Web3Provider } from "@/lib/providers/Web3Provider";
@@ -53,6 +54,7 @@ export default function RootLayout({
           <Header />
           {children}
         </Web3Provider>
+        <Analytics />
       </body>
     </html>
   );
