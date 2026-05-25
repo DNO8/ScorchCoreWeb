@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { Search } from "lucide-react";
-import { Card } from "@/components/ui";
+import {
+  BookOpen,
+  Coins,
+  Flame,
+  type LucideIcon,
+  Network,
+  Search,
+  Sparkles,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Footer } from "@/components/layout";
 
 interface Term {
   term: string;
   definition: string;
   category: "protocol" | "blockchain" | "economy";
 }
+
+type CategoryFilterValue = Term["category"] | "all";
 
 const TERMS: Term[] = [
   // Protocol
@@ -166,121 +176,232 @@ const TERMS: Term[] = [
   },
 ];
 
-const CATEGORY_LABELS: Record<
+const CATEGORY_META: Record<
   Term["category"],
-  { label: string; icon: string }
+  {
+    label: string;
+    icon: LucideIcon;
+    accent: string;
+    border: string;
+    glow: string;
+  }
 > = {
-  protocol: { label: "Protocol", icon: "🔥" },
-  economy: { label: "Economy", icon: "💰" },
-  blockchain: { label: "Blockchain", icon: "⛓️" },
+  protocol: {
+    label: "Protocol",
+    icon: Flame,
+    accent: "text-magma-gold",
+    border: "border-magma-gold/45",
+    glow: "from-orange-500/26 to-yellow-300/8",
+  },
+  economy: {
+    label: "Economy",
+    icon: Coins,
+    accent: "text-ethereal-cyan",
+    border: "border-ethereal-cyan/45",
+    glow: "from-cyan-300/22 to-blue-500/8",
+  },
+  blockchain: {
+    label: "Blockchain",
+    icon: Network,
+    accent: "text-magma-orange",
+    border: "border-orange-400/45",
+    glow: "from-orange-600/20 to-cyan-300/8",
+  },
 };
+
+const FILTERS: Array<{
+  value: CategoryFilterValue;
+  label: string;
+  icon: LucideIcon;
+}> = [
+  { value: "all", label: "All", icon: BookOpen },
+  { value: "protocol", label: CATEGORY_META.protocol.label, icon: Flame },
+  { value: "economy", label: CATEGORY_META.economy.label, icon: Coins },
+  { value: "blockchain", label: CATEGORY_META.blockchain.label, icon: Network },
+];
+
+function getCategoryCount(category: CategoryFilterValue) {
+  if (category === "all") return TERMS.length;
+  return TERMS.filter((term) => term.category === category).length;
+}
+
+function TerminologyHero({ total }: { total: number }) {
+  return (
+    <header className="mx-auto max-w-4xl text-center">
+      <p className="alchemy-eyebrow mb-4 text-xs">ScorchCore Lexicon</p>
+      <h1 className="alchemy-heading-strong text-balance text-4xl leading-tight md:text-6xl">
+        Terminology
+      </h1>
+      <p className="alchemy-copy mx-auto mt-5 max-w-2xl text-pretty text-sm leading-7 text-white/72 md:text-base">
+        A field guide to the protocol language behind dormant assets, alchemical
+        forging, CoreMiner production, and the $CORE economy.
+      </p>
+      <div className="mx-auto mt-7 flex w-fit items-center gap-2 border border-ethereal-cyan/25 bg-black/35 px-4 py-2 text-xs text-cyan-50/70 shadow-[0_0_24px_rgba(125,249,255,0.08)]">
+        <Sparkles className="h-3.5 w-3.5 text-ethereal-cyan" />
+        <span>{total} indexed terms</span>
+      </div>
+    </header>
+  );
+}
+
+function TerminologySearch({
+  search,
+  onSearchChange,
+}: {
+  search: string;
+  onSearchChange: (value: string) => void;
+}) {
+  return (
+    <label className="group relative block">
+      <span className="sr-only">Search terminology</span>
+      <Search className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ethereal-cyan/70 transition-colors group-focus-within:text-magma-gold" />
+      <input
+        type="search"
+        aria-label="Search terminology"
+        placeholder="Search terms, systems, tokens..."
+        value={search}
+        onChange={(event) => onSearchChange(event.target.value)}
+        className="alchemy-copy h-14 w-full border border-ethereal-cyan/25 bg-black/48 px-14 text-sm text-cyan-50 shadow-[inset_0_0_24px_rgba(125,249,255,0.05),0_0_30px_rgba(0,0,0,0.45)] outline-none transition-all placeholder:text-cyan-50/32 focus:border-magma-gold/70 focus:shadow-[inset_0_0_28px_rgba(247,198,90,0.08),0_0_34px_rgba(240,106,18,0.16)]"
+      />
+    </label>
+  );
+}
+
+function CategoryFilter({
+  activeCategory,
+  onCategoryChange,
+}: {
+  activeCategory: CategoryFilterValue;
+  onCategoryChange: (category: CategoryFilterValue) => void;
+}) {
+  return (
+    <fieldset className="flex flex-wrap gap-2">
+      <legend className="sr-only">Filter terminology categories</legend>
+      {FILTERS.map((filter) => {
+        const Icon = filter.icon;
+        const isActive = activeCategory === filter.value;
+        return (
+          <button
+            key={filter.value}
+            type="button"
+            aria-pressed={isActive}
+            onClick={() => onCategoryChange(filter.value)}
+            className={`inline-flex min-h-11 items-center gap-2 border px-4 py-2 text-xs font-semibold uppercase transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/75 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${
+              isActive
+                ? "border-magma-gold/70 bg-orange-500/14 text-magma-gold shadow-[0_0_26px_rgba(240,106,18,0.18)]"
+                : "border-cyan-100/12 bg-black/42 text-cyan-50/58 hover:border-ethereal-cyan/45 hover:text-cyan-50"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            <span>{filter.label}</span>
+            <span className="text-cyan-50/42">
+              {getCategoryCount(filter.value)}
+            </span>
+          </button>
+        );
+      })}
+    </fieldset>
+  );
+}
+
+function TermCard({ item }: { item: Term }) {
+  const meta = CATEGORY_META[item.category];
+  const Icon = meta.icon;
+
+  return (
+    <article
+      className={`group relative overflow-hidden border ${meta.border} bg-black/42 p-5 shadow-[0_18px_50px_rgba(0,0,0,0.34)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-magma-gold/55 hover:shadow-[0_22px_60px_rgba(0,0,0,0.46)]`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${meta.glow} opacity-70 transition-opacity group-hover:opacity-100`}
+      />
+      <div className="pointer-events-none absolute left-0 top-0 h-full w-px bg-gradient-to-b from-transparent via-magma-gold/70 to-transparent" />
+
+      <div className="relative flex gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center border border-cyan-100/14 bg-black/50 shadow-[0_0_22px_rgba(125,249,255,0.08)]">
+          <Icon className={`h-5 w-5 ${meta.accent}`} />
+        </div>
+        <div className="min-w-0">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <h2 className="alchemy-heading text-xl leading-tight">
+              {item.term}
+            </h2>
+            <span className="border border-cyan-100/12 bg-black/42 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-cyan-50/52">
+              {meta.label}
+            </span>
+          </div>
+          <p className="alchemy-copy text-sm leading-7 text-cyan-50/72">
+            {item.definition}
+          </p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EmptyTerminologyState({ search }: { search: string }) {
+  return (
+    <div className="border border-orange-300/20 bg-black/42 px-6 py-14 text-center shadow-[0_0_36px_rgba(240,106,18,0.08)]">
+      <BookOpen className="mx-auto mb-4 h-8 w-8 text-magma-gold" />
+      <h2 className="alchemy-heading mb-3 text-2xl">No matching terms</h2>
+      <p className="alchemy-copy mx-auto max-w-md text-sm leading-6 text-cyan-50/62">
+        No entries matched "{search}". Try a protocol name, token symbol, or
+        blockchain operation.
+      </p>
+    </div>
+  );
+}
 
 export default function TerminologyPage() {
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<
-    Term["category"] | "all"
-  >("all");
+  const [activeCategory, setActiveCategory] =
+    useState<CategoryFilterValue>("all");
 
-  const filtered = TERMS.filter((t) => {
-    const matchesSearch =
-      search === "" ||
-      t.term.toLowerCase().includes(search.toLowerCase()) ||
-      t.definition.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory =
-      activeCategory === "all" || t.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filtered = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return TERMS.filter((term) => {
+      const matchesSearch =
+        normalizedSearch === "" ||
+        term.term.toLowerCase().includes(normalizedSearch) ||
+        term.definition.toLowerCase().includes(normalizedSearch);
+      const matchesCategory =
+        activeCategory === "all" || term.category === activeCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [activeCategory, search]);
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <main className="container mx-auto px-4 py-12">
-        {/* Page Header */}
-        <div className="max-w-3xl mx-auto text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-linear-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
-            Terminology
-          </h1>
-          <p className="text-gray-400 text-lg">
-            A comprehensive glossary of terms used in the ScorchCore Protocol
-            ecosystem.
-          </p>
-        </div>
+    <>
+      <main className="alchemy-copy relative min-h-screen overflow-hidden bg-deep-abyss pt-28 text-white">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_8%,rgba(125,249,255,0.16),transparent_30%),radial-gradient(circle_at_22%_32%,rgba(240,106,18,0.14),transparent_28%),linear-gradient(180deg,#020607_0%,#030b0e_48%,#010203_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.78),transparent_20%,transparent_80%,rgba(0,0,0,0.78)),radial-gradient(ellipse_at_center,transparent_0_42%,rgba(0,0,0,0.58)_100%)]" />
 
-        {/* Search & Filters */}
-        <div className="max-w-3xl mx-auto mb-8 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search terms..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+        <div className="relative z-[1] mx-auto w-full max-w-6xl px-4 pb-20 md:px-8">
+          <TerminologyHero total={TERMS.length} />
+
+          <section className="mx-auto mt-10 max-w-4xl space-y-4 border border-cyan-100/10 bg-black/30 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.38)] backdrop-blur-md md:p-5">
+            <TerminologySearch search={search} onSearchChange={setSearch} />
+            <CategoryFilter
+              activeCategory={activeCategory}
+              onCategoryChange={setActiveCategory}
             />
-          </div>
+          </section>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveCategory("all")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeCategory === "all"
-                  ? "bg-orange-500/20 text-orange-400 border border-orange-500/50"
-                  : "bg-gray-800 text-gray-400 border border-gray-700 hover:text-white"
-              }`}
-            >
-              All ({TERMS.length})
-            </button>
-            {(Object.keys(CATEGORY_LABELS) as Term["category"][]).map((cat) => {
-              const count = TERMS.filter((t) => t.category === cat).length;
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeCategory === cat
-                      ? "bg-orange-500/20 text-orange-400 border border-orange-500/50"
-                      : "bg-gray-800 text-gray-400 border border-gray-700 hover:text-white"
-                  }`}
-                >
-                  {CATEGORY_LABELS[cat].icon} {CATEGORY_LABELS[cat].label} (
-                  {count})
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Terms Grid */}
-        <div className="max-w-3xl mx-auto space-y-4">
-          {filtered.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <p className="text-lg">No terms found matching your search.</p>
-            </div>
-          ) : (
-            filtered.map((item) => (
-              <Card key={item.term} variant="glass" className="p-6">
-                <div className="flex items-start gap-4">
-                  <span className="text-2xl mt-0.5">
-                    {CATEGORY_LABELS[item.category].icon}
-                  </span>
-                  <div>
-                    <h3 className="text-lg font-bold text-white mb-1">
-                      {item.term}
-                    </h3>
-                    <span className="inline-block px-2 py-0.5 mb-2 text-xs rounded bg-gray-800 text-gray-400 border border-gray-700">
-                      {CATEGORY_LABELS[item.category].label}
-                    </span>
-                    <p className="text-gray-400 leading-relaxed">
-                      {item.definition}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ))
-          )}
+          <section className="mt-10">
+            {filtered.length === 0 ? (
+              <EmptyTerminologyState search={search} />
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {filtered.map((item) => (
+                  <TermCard key={item.term} item={item} />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </main>
-    </div>
+      <Footer />
+    </>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Footer } from "@/components/layout";
 import { Card } from "@/components/ui";
 
 interface TeamMember {
@@ -237,18 +238,18 @@ export default function TeamPage() {
               contribute ideas, and be part of the future of digital alchemy.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <a
-                href="#"
-                className="px-6 py-3 bg-gray-800 border border-gray-700 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
+              <span
+                aria-disabled="true"
+                className="cursor-default rounded-lg border border-gray-700 bg-gray-800 px-6 py-3 text-sm font-medium text-gray-500"
               >
                 Discord
-              </a>
-              <a
-                href="#"
-                className="px-6 py-3 bg-gray-800 border border-gray-700 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
+              </span>
+              <span
+                aria-disabled="true"
+                className="cursor-default rounded-lg border border-gray-700 bg-gray-800 px-6 py-3 text-sm font-medium text-gray-500"
               >
                 Twitter / X
-              </a>
+              </span>
               <a
                 href="https://github.com/DNO8/ScorchCoreWeb"
                 target="_blank"
@@ -261,6 +262,7 @@ export default function TeamPage() {
           </Card>
         </section>
       </main>
+      <Footer />
     </div>
   );
 }
