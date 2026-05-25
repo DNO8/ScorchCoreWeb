@@ -70,6 +70,7 @@ export default function Hero() {
             start: "top top",
             end: "bottom bottom",
             scrub: 1,
+            invalidateOnRefresh: true,
           },
         });
 
@@ -146,7 +147,8 @@ export default function Hero() {
       });
 
       media.add("(max-width: 767px)", () => {
-        gsap.set(stone, { xPercent: -50, yPercent: -48, scale: 1 });
+        gsap.set(stone, { xPercent: -50, yPercent: -50, scale: 1 });
+        gsap.set(stoneImage, { opacity: 0.72 });
         gsap.set(text, { opacity: 1, y: 0, filter: "blur(0px)" });
         gsap.set(glow, { opacity: 0.9, scale: 1 });
         gsap.set(eclipse, {
@@ -163,7 +165,8 @@ export default function Hero() {
             trigger: section,
             start: "top top",
             end: "bottom bottom",
-            scrub: 0.7,
+            scrub: 0.35,
+            invalidateOnRefresh: true,
           },
         });
 
@@ -175,13 +178,12 @@ export default function Hero() {
           )
           .to(
             stone,
-            { scale: 1.68, yPercent: -49, duration: 0.64, ease: "none" },
+            { scale: 1.62, yPercent: -50, duration: 0.64, ease: "none" },
             0,
           )
-          .to(stoneImage, { opacity: 0.92, duration: 0.5, ease: "none" }, 0)
           .to(
             glow,
-            { opacity: 1, scale: 2.2, duration: 0.62, ease: "none" },
+            { opacity: 0.95, scale: 2.05, duration: 0.62, ease: "none" },
             0.02,
           )
           .to(sideRocks, { opacity: 0.14, duration: 0.42, ease: "none" }, 0.15)
@@ -207,7 +209,7 @@ export default function Hero() {
             },
             0.74,
           )
-          .to(stoneImage, { opacity: 0.08, duration: 0.18, ease: "none" }, 0.76)
+          .to(stoneImage, { opacity: 0.1, duration: 0.18, ease: "none" }, 0.76)
           .to(frame, { opacity: 0, duration: 0.12, ease: "none" }, 0.94);
 
         return () => timeline.kill();
@@ -287,10 +289,11 @@ export default function Hero() {
             src="/assets/landing/piedra.webp"
             alt=""
             aria-hidden="true"
-            width={1536}
-            height={1024}
+            width={986}
+            height={842}
             priority
             ref={stoneImageRef}
+            onLoad={() => ScrollTrigger.refresh()}
             className="scorch-hero__stone absolute inset-0 h-full w-full object-contain opacity-70 mix-blend-screen"
           />
         </div>

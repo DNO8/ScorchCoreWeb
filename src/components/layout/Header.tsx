@@ -1,14 +1,15 @@
 "use client";
 
 import { ChevronDown, Menu, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui";
 import { ConnectWallet } from "@/components/wallet";
-import { useWallet } from "@/lib/hooks/user/useWallet";
 import { PUBLIC_NAV_ITEMS } from "@/lib/constants/routes";
+import { useWallet } from "@/lib/hooks/user/useWallet";
+import { ScorchNavLink } from "./ScorchNavLink";
 
 export const Header: React.FC = () => {
   const { isConnected } = useWallet();
@@ -18,79 +19,77 @@ export const Header: React.FC = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const appLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: "🏠" },
-    { href: "/forge", label: "Forge", icon: "🔥" },
-    { href: "/inventory", label: "Inventory", icon: "📦" },
-    { href: "/staking", label: "Mining", icon: "⛏️" },
-    { href: "/analytics", label: "Analytics", icon: "📊" },
-    { href: "/collection", label: "Collections", icon: "🏆" },
-    { href: "/trustscore", label: "TrustScore", icon: "🎯" },
-    { href: "/economy", label: "Economy", icon: "💰" },
-    { href: "/vesting", label: "Vesting", icon: "🔒" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/forge", label: "Forge" },
+    { href: "/inventory", label: "Inventory" },
+    { href: "/staking", label: "Mining" },
+    { href: "/analytics", label: "Analytics" },
+    { href: "/collection", label: "Collections" },
+    { href: "/trustscore", label: "TrustScore" },
+    { href: "/economy", label: "Economy" },
+    { href: "/vesting", label: "Vesting" },
   ];
+  const dropdownLinks = appLinks.slice(4);
+  const isMoreActive = dropdownLinks.some((link) => pathname === link.href);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-gray-800 bg-black/95 backdrop-blur supports-backdrop-filter:bg-black/80">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <header className="sticky top-0 z-40 w-full bg-linear-to-b from-black/95 via-black/78 to-black/20 backdrop-blur-md supports-backdrop-filter:bg-black/70">
+      <div className="container mx-auto flex h-20 items-center justify-between px-4">
         {/* Logo */}
-        <Link href={homeUrl} className="flex items-center space-x-2">
-          <div className="h-10 w-10 rounded-lg bg-linear-to-br from-orange-500 to-red-600 flex items-center justify-center">
-            <span className="text-2xl font-bold text-white">🔥</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="alchemy-heading text-xl">ScorchCore</span>
-            <span className="alchemy-copy text-ethereal-cyan text-xs opacity-70">
-              Protocol
-            </span>
-          </div>
+        <Link
+          href={homeUrl}
+          aria-label="ScorchCore Protocol"
+          className="group flex items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-orange-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+        >
+          <Image
+            src="/logo.png"
+            alt=""
+            width={56}
+            height={56}
+            priority
+            className="h-14 w-14 rounded-full object-cover shadow-[0_0_28px_rgba(240,106,18,0.34)] transition duration-200 group-hover:scale-[1.03] group-hover:shadow-[0_0_38px_rgba(247,198,90,0.42)]"
+          />
+          <span className="sr-only">ScorchCore Protocol</span>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-1">
+        <nav className="hidden items-center gap-2 lg:flex">
           {/* Public Links - always visible */}
           {PUBLIC_NAV_ITEMS.map((link) => (
-            <Link key={link.href} href={link.href}>
-              <Button
-                variant={pathname === link.href ? "primary" : "ghost"}
-                size="sm"
-                className="text-sm"
-              >
-                <span className="mr-1">{link.icon}</span>
-                {link.label}
-              </Button>
-            </Link>
+            <ScorchNavLink
+              key={link.href}
+              href={link.href}
+              label={link.label}
+              isActive={pathname === link.href}
+            />
           ))}
 
           {/* App Links - only when connected */}
           {isConnected && (
             <>
-              <div className="mx-2 h-6 w-px bg-gray-700" />
+              <div className="mx-1 h-7 w-px bg-linear-to-b from-transparent via-orange-300/35 to-transparent" />
               {appLinks.slice(0, 4).map((link) => (
-                <Link key={link.href} href={link.href}>
-                  <Button
-                    variant={pathname === link.href ? "primary" : "ghost"}
-                    size="sm"
-                    className="text-sm"
-                  >
-                    <span className="mr-1">{link.icon}</span>
-                    {link.label}
-                  </Button>
-                </Link>
+                <ScorchNavLink
+                  key={link.href}
+                  href={link.href}
+                  label={link.label}
+                  isActive={pathname === link.href}
+                />
               ))}
 
               {/* More Dropdown */}
               <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="text-sm"
+                  aria-expanded={isDropdownOpen}
+                  className={`scorch-nav-link scorch-nav-link--desktop ${isMoreActive ? "is-active" : ""}`}
                 >
-                  More
+                  <span className="scorch-nav-label">[ MORE ]</span>
                   <ChevronDown
-                    className={`ml-1 w-4 h-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                    className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
                   />
-                </Button>
+                </button>
 
                 {isDropdownOpen && (
                   <>
@@ -100,25 +99,16 @@ export const Header: React.FC = () => {
                       className="fixed inset-0 z-40"
                       onClick={() => setIsDropdownOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50">
-                      {appLinks.slice(4).map((link, idx) => (
-                        <Link
+                    <div className="scorch-nav-panel absolute right-0 z-50 mt-3 w-56 p-2">
+                      {dropdownLinks.map((link) => (
+                        <ScorchNavLink
                           key={link.href}
                           href={link.href}
+                          label={link.label}
+                          variant="dropdown"
+                          isActive={pathname === link.href}
                           onClick={() => setIsDropdownOpen(false)}
-                          className={`flex items-center gap-2 px-4 py-3 text-sm hover:bg-gray-800 transition-colors ${
-                            pathname === link.href
-                              ? "text-orange-400 bg-gray-800/50"
-                              : "text-gray-300"
-                          } ${idx === 0 ? "rounded-t-lg" : ""} ${
-                            idx === appLinks.slice(4).length - 1
-                              ? "rounded-b-lg"
-                              : "border-b border-gray-800"
-                          }`}
-                        >
-                          <span>{link.icon}</span>
-                          <span>{link.label}</span>
-                        </Link>
+                        />
                       ))}
                     </div>
                   </>
@@ -138,12 +128,14 @@ export const Header: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors"
+            className="rounded-lg border border-orange-300/20 p-2 text-orange-100 transition-colors hover:border-orange-300/50 hover:text-magma-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black lg:hidden"
+            aria-label="Toggle navigation menu"
+            aria-expanded={isMobileMenuOpen}
           >
             {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
+              <X className="h-6 w-6" />
             ) : (
-              <Menu className="w-6 h-6" />
+              <Menu className="h-6 w-6" />
             )}
           </button>
         </div>
@@ -151,56 +143,46 @@ export const Header: React.FC = () => {
 
       {/* Mobile Menu - always available */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-gray-800 bg-black">
+        <div className="border-t border-orange-500/20 bg-black/95 lg:hidden">
           <nav className="container mx-auto px-4 py-4">
             {/* Public Links */}
-            <div className="space-y-1">
-              <p className="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <div className="space-y-2">
+              <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/55">
                 Learn
               </p>
               {PUBLIC_NAV_ITEMS.map((link) => (
-                <Link
+                <ScorchNavLink
                   key={link.href}
                   href={link.href}
+                  label={link.label}
+                  variant="mobile"
+                  isActive={pathname === link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    pathname === link.href
-                      ? "bg-orange-500/10 text-orange-400"
-                      : "text-gray-300 hover:bg-gray-800"
-                  }`}
-                >
-                  <span className="text-xl">{link.icon}</span>
-                  <span className="font-medium">{link.label}</span>
-                </Link>
+                />
               ))}
             </div>
 
             {/* App Links - only when connected */}
             {isConnected && (
-              <div className="mt-4 pt-4 border-t border-gray-800 space-y-1">
-                <p className="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <div className="mt-4 space-y-2 border-t border-orange-500/20 pt-4">
+                <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/55">
                   App
                 </p>
                 {appLinks.map((link) => (
-                  <Link
+                  <ScorchNavLink
                     key={link.href}
                     href={link.href}
+                    label={link.label}
+                    variant="mobile"
+                    isActive={pathname === link.href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      pathname === link.href
-                        ? "bg-orange-500/10 text-orange-400"
-                        : "text-gray-300 hover:bg-gray-800"
-                    }`}
-                  >
-                    <span className="text-xl">{link.icon}</span>
-                    <span className="font-medium">{link.label}</span>
-                  </Link>
+                  />
                 ))}
               </div>
             )}
 
             {/* Wallet */}
-            <div className="mt-4 pt-4 border-t border-gray-800">
+            <div className="mt-4 border-t border-orange-500/20 pt-4">
               <ConnectWallet />
             </div>
           </nav>

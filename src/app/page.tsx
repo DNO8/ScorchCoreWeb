@@ -1,11 +1,11 @@
 "use client";
 
-
 import { useEffect, useState } from "react";
 import ForgeProcess from "@/components/landing/ForgeProcess";
 import Hero from "@/components/landing/Hero";
 import Problem from "@/components/landing/Problem";
-import { Button, Card } from "@/components/ui";
+import Transmute from "@/components/landing/Transmute";
+import { Footer } from "@/components/layout";
 import { useWallet } from "@/lib/hooks/user/useWallet";
 
 export default function Home() {
@@ -53,6 +53,7 @@ export default function Home() {
       <Hero />
       <Problem />
       <ForgeProcess />
+      <Transmute />
 
       {/* Hero - Sé un Prospector
       little change of test
@@ -454,6 +455,7 @@ export default function Home() {
         </div>
       </section>
       */}
+      <Footer />
     </div>
   );
 }
