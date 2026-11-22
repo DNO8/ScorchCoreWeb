@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ConnectWallet } from "@/components/wallet";
 import { PUBLIC_NAV_ITEMS } from "@/lib/constants/routes";
 import { useWallet } from "@/lib/hooks/user/useWallet";
@@ -14,7 +14,6 @@ import { ScorchNavLink } from "./ScorchNavLink";
 export const Header: React.FC = () => {
   const { isConnected } = useWallet();
   const pathname = usePathname();
-  const homeUrl = isConnected ? "/dashboard" : "/";
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -28,17 +27,35 @@ export const Header: React.FC = () => {
     { href: "/trustscore", label: "TrustScore" },
     { href: "/economy", label: "Economy" },
     { href: "/vesting", label: "Vesting" },
+    { href: "/scholarship", label: "Scholarships" },
+    { href: "/airdrop", label: "Airdrops" },
+    { href: "/minigames", label: "Minigames" },
   ];
   const dropdownLinks = appLinks.slice(4);
   const isMoreActive = dropdownLinks.some((link) => pathname === link.href);
+  const isPublicRoute =
+    pathname === "/" ||
+    PUBLIC_NAV_ITEMS.some((link) => pathname === (link.href as string));
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileMenuOpen]);
 
   return (
     <header className="sticky top-0 z-40 w-full bg-linear-to-b from-black/95 via-black/78 to-black/20 backdrop-blur-md supports-backdrop-filter:bg-black/70">
       <div className="container mx-auto flex h-20 items-center justify-between px-4">
         {/* Logo */}
         <Link
-          href={homeUrl}
+          href="/"
           aria-label="ScorchCore Protocol"
+          translate="no"
           className="group flex items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-orange-400/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
         >
           <Image
@@ -54,66 +71,77 @@ export const Header: React.FC = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-2 lg:flex">
-          {/* Public Links - always visible */}
-          {PUBLIC_NAV_ITEMS.map((link) => (
-            <ScorchNavLink
-              key={link.href}
-              href={link.href}
-              label={link.label}
-              isActive={pathname === link.href}
-            />
-          ))}
+          {/* Public Links */}
+          {isPublicRoute &&
+            PUBLIC_NAV_ITEMS.map((link) => (
+              <ScorchNavLink
+                key={link.href}
+                href={link.href}
+                label={link.label}
+                isActive={pathname === (link.href as string)}
+              />
+            ))}
 
           {/* App Links - only when connected */}
           {isConnected && (
             <>
               <div className="mx-1 h-7 w-px bg-linear-to-b from-transparent via-orange-300/35 to-transparent" />
-              {appLinks.slice(0, 4).map((link) => (
+              {pathname === "/" ? (
                 <ScorchNavLink
-                  key={link.href}
-                  href={link.href}
-                  label={link.label}
-                  isActive={pathname === link.href}
+                  href="/dashboard"
+                  label="Dashboard"
+                  isActive={(pathname as string) === "/dashboard"}
                 />
-              ))}
+              ) : (
+                <>
+                  {appLinks.slice(0, 4).map((link) => (
+                    <ScorchNavLink
+                      key={link.href}
+                      href={link.href}
+                      label={link.label}
+                      isActive={pathname === link.href}
+                    />
+                  ))}
 
-              {/* More Dropdown */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  aria-expanded={isDropdownOpen}
-                  className={`scorch-nav-link scorch-nav-link--desktop ${isMoreActive ? "is-active" : ""}`}
-                >
-                  <span className="scorch-nav-label">[ MORE ]</span>
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                {isDropdownOpen && (
-                  <>
+                  {/* More Dropdown */}
+                  <div className="relative">
                     <button
                       type="button"
-                      aria-label="Close menu"
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsDropdownOpen(false)}
-                    />
-                    <div className="scorch-nav-panel absolute right-0 z-50 mt-3 w-56 p-2">
-                      {dropdownLinks.map((link) => (
-                        <ScorchNavLink
-                          key={link.href}
-                          href={link.href}
-                          label={link.label}
-                          variant="dropdown"
-                          isActive={pathname === link.href}
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      aria-expanded={isDropdownOpen}
+                      className={`scorch-nav-link scorch-nav-link--desktop ${isMoreActive ? "is-active" : ""}`}
+                    >
+                      <span className="scorch-nav-label">[ MORE ]</span>
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    {isDropdownOpen && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Close menu"
+                          className="fixed inset-0 z-40"
                           onClick={() => setIsDropdownOpen(false)}
                         />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+                        <div className="scorch-nav-panel absolute right-0 z-50 mt-3 w-56 p-2">
+                          {dropdownLinks.map((link) => (
+                            <ScorchNavLink
+                              key={link.href}
+                              href={link.href}
+                              label={link.label}
+                              variant="dropdown"
+                              isActive={pathname === link.href}
+                              onClick={() => setIsDropdownOpen(false)}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
             </>
           )}
         </nav>
@@ -143,8 +171,8 @@ export const Header: React.FC = () => {
 
       {/* Mobile Menu - always available */}
       {isMobileMenuOpen && (
-        <div className="border-t border-orange-500/20 bg-black/95 lg:hidden">
-          <nav className="container mx-auto px-4 py-4">
+        <div className="fixed inset-x-0 top-20 z-50 h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain border-t border-orange-500/20 bg-black/98 shadow-[0_24px_80px_rgba(0,0,0,0.62)] [scrollbar-color:rgba(125,249,255,0.35)_transparent] scrollbar-thin lg:hidden">
+          <nav className="container mx-auto px-4 py-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
             {/* Public Links */}
             <div className="space-y-2">
               <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/55">
@@ -168,16 +196,26 @@ export const Header: React.FC = () => {
                 <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/55">
                   App
                 </p>
-                {appLinks.map((link) => (
+                {pathname === "/" ? (
                   <ScorchNavLink
-                    key={link.href}
-                    href={link.href}
-                    label={link.label}
+                    href="/dashboard"
+                    label="Dashboard"
                     variant="mobile"
-                    isActive={pathname === link.href}
+                    isActive={(pathname as string) === "/dashboard"}
                     onClick={() => setIsMobileMenuOpen(false)}
                   />
-                ))}
+                ) : (
+                  appLinks.map((link) => (
+                    <ScorchNavLink
+                      key={link.href}
+                      href={link.href}
+                      label={link.label}
+                      variant="mobile"
+                      isActive={pathname === link.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    />
+                  ))
+                )}
               </div>
             )}
 

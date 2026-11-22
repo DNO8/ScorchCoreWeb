@@ -2,9 +2,16 @@
 
 import { useState } from 'react';
 import { ArrowRight, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { formatUnits } from 'viem';
+import { getUserFacingErrorMessage } from '@/lib/utils/errors/transactionError';
 
 interface ConvertfCoreButtonProps {
-  onConvert: (amount?: bigint) => Promise<{ success: boolean; error?: string }>;
+  onConvert: (amount?: bigint) => Promise<{
+    success: boolean;
+    error?: string;
+    coreReceived?: bigint;
+    feeAmount?: bigint;
+  }>;
   disabled?: boolean;
   className?: string;
   variant?: 'full' | 'compact';
@@ -30,16 +37,29 @@ export function ConvertfCoreButton({
       const res = await onConvert();
       
       if (res.success) {
+        const core = res.coreReceived
+          ? Number(formatUnits(res.coreReceived, 18)).toFixed(2)
+          : null;
+        const fee = res.feeAmount
+          ? Number(formatUnits(res.feeAmount, 18)).toFixed(2)
+          : null;
         setResult({
           success: true,
-          message: '¡fCORE convertido exitosamente!',
+          message: core
+            ? fee
+              ? `Converted ${core} CORE (${fee} CORE fee)`
+              : `Converted ${core} CORE`
+            : 'fCORE converted successfully',
         });
         
         setTimeout(() => setResult(null), 3000);
       } else {
         setResult({
           success: false,
-          message: res.error || 'Error al convertir fCORE',
+          message: getUserFacingErrorMessage(
+            res.error,
+            'No se pudo convertir fCORE',
+          ),
         });
         
         setTimeout(() => setResult(null), 5000);
@@ -47,7 +67,10 @@ export function ConvertfCoreButton({
     } catch (error) {
       setResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Error desconocido',
+        message: getUserFacingErrorMessage(
+          error,
+          'No se pudo convertir fCORE',
+        ),
       });
       
       setTimeout(() => setResult(null), 5000);

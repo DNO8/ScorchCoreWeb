@@ -1,11 +1,12 @@
 'use client';
 
 import { RefreshCw, Info, AlertTriangle } from 'lucide-react';
-import { Button, Loading, Card } from '@/components/ui';
+import { Button, Loading, Card, Toast } from '@/components/ui';
 import { useVesting } from '@/lib/hooks/economy/useVesting';
 import { VestingCard } from './VestingCard';
 import { VestingStatsCard } from './VestingStatsCard';
-import { useToast } from '@/components/ui';
+import { useTransactionErrorToast } from '@/components/ui';
+import { getUserFacingErrorMessage } from '@/lib/utils/errors/transactionError';
 
 interface VestingDashboardProps {
   className?: string;
@@ -26,14 +27,15 @@ export function VestingDashboard({ className = '' }: VestingDashboardProps) {
     hasSchedules,
     hasReleasable,
   } = useVesting();
-  const { showSuccess, showError } = useToast();
+  const { toast, showSuccess, hideToast, showTransactionError } =
+    useTransactionErrorToast();
 
   const handleRelease = async (scheduleId: bigint) => {
     try {
       await release(scheduleId);
       showSuccess('Tokens liberados exitosamente');
     } catch (error) {
-      showError('Error al liberar tokens');
+      showTransactionError(error, 'Error al liberar tokens');
     }
   };
 
@@ -50,7 +52,12 @@ export function VestingDashboard({ className = '' }: VestingDashboardProps) {
       <Card variant="glass" className="p-6">
         <div className="text-center text-red-400">
           <p className="font-bold mb-2">Error al cargar información</p>
-          <p className="text-sm text-gray-400">{error.message}</p>
+          <p className="text-sm text-gray-400">
+            {getUserFacingErrorMessage(
+              error,
+              'No se pudo cargar la información de vesting',
+            )}
+          </p>
           <Button onClick={refresh} className="mt-4">
             Reintentar
           </Button>
@@ -153,6 +160,17 @@ export function VestingDashboard({ className = '' }: VestingDashboardProps) {
           ))}
         </div>
       </div>
+
+      {/* Toast para errores de liberación */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          title={toast.title}
+          action={toast.action}
+          onClose={hideToast}
+        />
+      )}
     </div>
   );
 }

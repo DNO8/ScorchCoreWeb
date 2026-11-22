@@ -4,12 +4,10 @@ import { clsx } from "clsx";
 import {
   ArrowRight,
   BookOpen,
-  FileText,
   Github,
   Hammer,
   Instagram,
   type LucideIcon,
-  MessageCircle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -33,26 +31,24 @@ interface FooterSocialLink {
   label: string;
   href: string;
   icon?: LucideIcon;
-  disabled?: boolean;
 }
 
 const currentYear = new Date().getFullYear();
 
-const primaryLinks: FooterPrimaryLink[] = [
-  {
-    label: "White Paper",
-    href: "#",
-    icon: FileText,
-    disabled: true,
-  },
+const primaryLinks: readonly FooterPrimaryLink[] = [
+  //{
+  //  label: "White Paper",
+  //  href: "/pdf/WhitePaper.pdf",
+  //  icon: FileText,
+  //},
   {
     label: "Forge Manual",
-    href: "/terminology",
+    href: "/pdf/Manual_forja.pdf",
     icon: BookOpen,
   },
   {
     label: "GitHub",
-    href: "https://github.com/DNO8/ScorchCoreWeb",
+    href: "https://github.com/Scorchcore/ScorchCore",
     icon: Github,
     external: true,
   },
@@ -64,10 +60,13 @@ const primaryLinks: FooterPrimaryLink[] = [
   },
 ] as const;
 
-const socialLinks: FooterSocialLink[] = [
-  { label: "X", href: "#", disabled: true },
-  { label: "Instagram", href: "#", icon: Instagram, disabled: true },
-  { label: "Discord", href: "#", icon: MessageCircle, disabled: true },
+const socialLinks: readonly FooterSocialLink[] = [
+  { label: "X", href: "https://x.com/ScorchCoreLatam" },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/prospectorzero",
+    icon: Instagram,
+  },
 ] as const;
 
 const sparkPositions = [
@@ -125,19 +124,27 @@ function FooterLink({ item }: { item: FooterPrimaryLink }) {
 
 function SocialLink({ item }: { item: FooterSocialLink }) {
   const Icon = item.icon;
-
-  return (
-    <span
-      aria-disabled={item.disabled ? "true" : undefined}
-      className="scorch-footer-social"
-    >
+  const content = (
+    <>
       {Icon ? (
         <Icon className="h-6 w-6" />
       ) : (
         <span className="text-4xl">X</span>
       )}
       <span className="sr-only">{item.label}</span>
-    </span>
+    </>
+  );
+
+  return (
+    <a
+      href={item.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={item.label}
+      className="scorch-footer-social"
+    >
+      {content}
+    </a>
   );
 }
 
@@ -163,7 +170,7 @@ export const Footer: React.FC<FooterProps> = ({
         />
       ))}
 
-      <div className="scorch-footer-frame relative z-[1] mx-auto w-[min(1120px,calc(100%-2rem))] px-4 py-8 md:px-8 md:py-10">
+      <div className="scorch-footer-frame relative z-1 mx-auto w-[min(1120px,calc(100%-2rem))] px-4 py-8 md:px-8 md:py-10">
         <div className="grid gap-3 md:grid-cols-4">
           {primaryLinks.map((item) => (
             <FooterLink key={item.label} item={item} />
@@ -186,11 +193,14 @@ export const Footer: React.FC<FooterProps> = ({
             <span>SCORCH HEART-LAB ]</span>
           </Link>
 
-          <div className="mt-9 flex items-center justify-center gap-6 md:gap-8">
+          <nav
+            aria-label="Social links"
+            className="mt-9 flex items-center justify-center gap-6 md:gap-8"
+          >
             {socialLinks.map((item) => (
               <SocialLink key={item.label} item={item} />
             ))}
-          </div>
+          </nav>
 
           <p className="mt-8 text-center text-xs leading-6 text-cyan-100/48 md:text-sm">
             Developed for the Ronin Ecosystem - ScorchCore Protocol{" "}

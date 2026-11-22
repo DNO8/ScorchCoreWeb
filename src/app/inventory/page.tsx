@@ -1,63 +1,544 @@
 "use client";
 
-
-
-import React, { useState, useEffect } from "react";
+import { Contract } from "ethers";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useWallet } from "@/lib/hooks/user/useWallet";
-import { Card, Button, Badge, Loading, Toast, useToast } from "@/components/ui";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+import { parseEther } from "viem";
+import Lightbox from "yet-another-react-lightbox";
 import { GeodeVideo } from "@/components/GeodeVideo";
 import { HatchRoulette } from "@/components/HatchRoulette";
 import { HatchSuccessModal } from "@/components/HatchSuccessModal";
-import Link from "next/link";
-import { useAccount } from "wagmi";
-import Lightbox from "yet-another-react-lightbox";
+import {
+  Loading,
+  Toast,
+  useTransactionErrorToast,
+} from "@/components/ui";
+import { useWallet } from "@/lib/hooks/user/useWallet";
+import { getUserFacingErrorMessage } from "@/lib/utils/errors/transactionError";
 import "yet-another-react-lightbox/styles.css";
-import { useInventoryFacade } from "@/lib/hooks/facades/useInventoryFacade";
-import { useForgeFacade } from "@/lib/hooks/facades/useForgeFacade";
-import { useMetadataService } from "@/lib/hooks/services/useMetadataService";
-import { useContractManager } from "@/lib/hooks/contracts/useContractManager";
-import { useNFTFacade } from "@/lib/hooks/facades/useNFTFacade";
-import { createServiceLogger } from "@/lib/utils/logging/logger";
+import {
+  Backpack,
+  Calendar,
+  CheckCircle2,
+  ChevronLeft,
+  Clock,
+  Egg,
+  Hammer,
+  Layers,
+  Loader2,
+  Pickaxe,
+  RefreshCw,
+  Timer,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
+import { Footer } from "@/components/layout";
+import type { HatchResult as ComponentHatchResult } from "@/components/types/HatchTypes";
+import { MinerVideoPlayer } from "@/components/ui/VideoPlayer";
+import { CONTRACT_ADDRESSES } from "@/lib/config/deployment.config";
+import {
+  AXIE_CLASS_INFO,
+  type AxieClass,
+  CATEGORY_INFO,
+  type GeodeCategory,
+} from "@/lib/constants/geodes";
+import type { HatchResult } from "@/lib/contracts/interfaces/IGeodeHatcher";
 import type { GeodeInventoryInfo } from "@/lib/facades/InventoryFacade";
 import type { CoreMinerNFT } from "@/lib/facades/NFTFacade";
-import { MinerVideoPlayer } from "@/components/ui/VideoPlayer";
-import type { HatchResult } from "@/lib/contracts/interfaces/IGeodeHatcher";
-import type { HatchResult as ComponentHatchResult } from "@/components/types/HatchTypes";
+import { useContractManager } from "@/lib/hooks/contracts/useContractManager";
 import {
-  GeodeCategory,
-  AxieClass,
-  CATEGORY_INFO,
-  AXIE_CLASS_INFO,
-} from "@/lib/constants/geodes";
+  useGeodeVideoUrl,
+  useInvalidateOnTx,
+  useMinerVideoUrl,
+  useUserGeodesPaginated,
+  useUserMiners,
+} from "@/lib/queries";
+import { createServiceLogger } from "@/lib/utils/logging/logger";
 
 const logger = createServiceLogger("InventoryPage");
+type TabValue = "all" | "geodes" | "miners";
+
+// ─── Status Chip ─────────────────────────────────────────────────────────────
+
+type StatusKind = "ready" | "incubating" | "hatched" | "mining" | "idle";
+
+const STATUS_STYLES: Record<StatusKind, string> = {
+  ready: "border-magma-gold/55 bg-orange-500/14 text-magma-gold",
+  incubating: "border-ethereal-cyan/45 bg-cyan-300/8 text-ethereal-cyan/80",
+  hatched: "border-cyan-100/12 bg-black/30 text-cyan-50/42",
+  mining: "border-emerald-400/45 bg-emerald-500/8 text-emerald-300",
+  idle: "border-cyan-100/12 bg-black/30 text-cyan-50/42",
+};
+const STATUS_LABELS: Record<StatusKind, string> = {
+  ready: "Ready",
+  incubating: "Incubating",
+  hatched: "Hatched",
+  mining: "Mining",
+  idle: "Idle",
+};
+
+function StatusChip({ status }: { status: StatusKind }) {
+  return (
+    <span
+      className={`shrink-0 border px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] ${STATUS_STYLES[status]}`}
+    >
+      {STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+// ─── Tab Button ───────────────────────────────────────────────────────────────
+
+function TabButton({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ElementType;
+  label: string;
+  count: number;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`inline-flex min-h-10 items-center gap-2 border px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/75 focus-visible:ring-offset-2 focus-visible:ring-offset-black ${
+        active
+          ? "border-magma-gold/70 bg-orange-500/14 text-magma-gold shadow-[0_0_26px_rgba(240,106,18,0.18)]"
+          : "border-cyan-100/12 bg-black/42 text-cyan-50/58 hover:border-ethereal-cyan/45 hover:text-cyan-50"
+      }`}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      <span>{label}</span>
+      <span className={active ? "text-magma-gold/60" : "text-cyan-50/38"}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+// ─── Geode Card ───────────────────────────────────────────────────────────────
+
+function GeodeCard({
+  geode,
+  isHatching,
+  onHatch,
+  onOpenLightbox,
+  getTimeRemaining,
+}: {
+  geode: GeodeInventoryInfo;
+  isHatching: boolean;
+  onHatch: (id: bigint) => void;
+  onOpenLightbox: (geode: GeodeInventoryInfo, videoUrl: string) => void;
+  getTimeRemaining: (hatchTime: number) => string;
+}) {
+  const { data: videoUrl = "" } = useGeodeVideoUrl(
+    geode.category,
+    geode.axieClass,
+  );
+  const status: StatusKind = geode.isHatched
+    ? "hatched"
+    : geode.canHatch
+      ? "ready"
+      : "incubating";
+
+  const borderClass = geode.isHatched
+    ? "border-cyan-100/12"
+    : geode.canHatch
+      ? "border-magma-gold/45"
+      : "border-ethereal-cyan/20";
+
+  const glowClass = geode.isHatched
+    ? "from-cyan-300/4 to-transparent"
+    : geode.canHatch
+      ? "from-orange-500/20 to-yellow-300/6"
+      : "from-cyan-300/10 to-blue-500/4";
+
+  return (
+    <article
+      className={`group relative overflow-hidden border ${borderClass} bg-black/42 shadow-[0_18px_50px_rgba(0,0,0,0.34)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(0,0,0,0.46)]`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 bg-linear-to-br ${glowClass} opacity-70 transition-opacity group-hover:opacity-100`}
+      />
+      <div className="pointer-events-none absolute left-0 top-0 h-full w-px bg-linear-to-b from-transparent via-magma-gold/55 to-transparent" />
+
+      {/* Video preview */}
+      <button
+        type="button"
+        aria-label={`View ${geode.fullName} fullscreen`}
+        className="relative mx-4 mt-4 flex h-52 w-[calc(100%-2rem)] cursor-pointer items-center justify-center overflow-hidden border border-cyan-100/8 bg-black/30 transition-colors hover:border-ethereal-cyan/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+        onClick={() => onOpenLightbox(geode, videoUrl)}
+      >
+        <GeodeVideo
+          category={geode.category}
+          axieClass={geode.axieClass}
+          className="h-full w-auto max-w-full object-contain"
+          autoPlay={true}
+        />
+      </button>
+
+      {/* Body */}
+      <div className="relative p-4">
+        {/* Name + status */}
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="alchemy-heading truncate text-base leading-tight">
+              {geode.fullName}
+            </h3>
+            <p className="mt-0.5 text-[0.65rem] text-cyan-50/38">
+              ID #{geode.id.toString()}
+            </p>
+          </div>
+          <StatusChip status={status} />
+        </div>
+
+        {/* Category + class badges */}
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          <span
+            style={{
+              borderColor: `${CATEGORY_INFO[geode.category].color}88`,
+              color: CATEGORY_INFO[geode.category].color,
+              backgroundColor: `${CATEGORY_INFO[geode.category].color}1a`,
+            }}
+            className="border px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.12em]"
+          >
+            {CATEGORY_INFO[geode.category].name}
+          </span>
+          <span
+            style={{
+              borderColor: `${AXIE_CLASS_INFO[geode.axieClass].color}88`,
+              color: AXIE_CLASS_INFO[geode.axieClass].color,
+              backgroundColor: `${AXIE_CLASS_INFO[geode.axieClass].color}1a`,
+            }}
+            className="border px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.12em]"
+          >
+            {AXIE_CLASS_INFO[geode.axieClass].name}
+          </span>
+        </div>
+
+        {/* Stats */}
+        <div className="mb-4 divide-y divide-cyan-100/8 border border-cyan-100/8 bg-black/20">
+          <div className="flex items-center justify-between px-3 py-2.5">
+            <span className="flex items-center gap-1.5 text-xs text-cyan-50/52">
+              <Zap className="h-3.5 w-3.5 text-magma-gold/70" />
+              Power
+            </span>
+            <span className="text-xs font-semibold text-white">
+              {geode.miningPower}
+            </span>
+          </div>
+          {!geode.isHatched && (
+            <div className="flex items-center justify-between px-3 py-2.5">
+              <span className="flex items-center gap-1.5 text-xs text-cyan-50/52">
+                <Clock className="h-3.5 w-3.5 text-ethereal-cyan/55" />
+                Time
+              </span>
+              <span
+                className={`text-xs font-semibold ${geode.canHatch ? "text-magma-gold" : "text-white"}`}
+              >
+                {getTimeRemaining(geode.hatchTime)}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center justify-between px-3 py-2.5">
+            <span className="flex items-center gap-1.5 text-xs text-cyan-50/52">
+              <Calendar className="h-3.5 w-3.5 text-cyan-300/45" />
+              Forged
+            </span>
+            <span className="text-xs text-white">
+              {new Date(geode.createdAt * 1000).toLocaleDateString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Action */}
+        {geode.canHatch && !geode.isHatched ? (
+          <button
+            type="button"
+            onClick={() => onHatch(geode.id)}
+            disabled={isHatching}
+            className="flex w-full items-center justify-center gap-2 border border-ethereal-cyan/55 bg-cyan-300/14 py-3 text-xs font-semibold uppercase tracking-wider text-cyan-50 shadow-[0_0_28px_rgba(125,249,255,0.16)] transition-all hover:border-ethereal-cyan hover:bg-cyan-300/22 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+          >
+            {isHatching ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Hatching…
+              </>
+            ) : (
+              <>
+                <Egg className="h-3.5 w-3.5" />
+                Hatch Now
+              </>
+            )}
+          </button>
+        ) : geode.isHatched ? (
+          <div className="flex items-center justify-center gap-2 border border-cyan-100/8 bg-black/20 py-3 text-xs uppercase tracking-wider text-cyan-50/30">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Already Hatched
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2 border border-cyan-100/10 bg-black/20 py-3 text-xs uppercase tracking-wider text-cyan-50/38">
+            <Timer className="h-3.5 w-3.5 text-ethereal-cyan/35" />
+            Incubating
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+// ─── Miner Card ───────────────────────────────────────────────────────────────
+
+function MinerCard({
+  miner,
+  onOpenLightbox,
+  onShowInfo,
+  onNavigate,
+}: {
+  miner: CoreMinerNFT;
+  onOpenLightbox: (miner: CoreMinerNFT, videoUrl: string) => void;
+  onShowInfo: (msg: string) => void;
+  onNavigate: (tokenId: string) => void;
+}) {
+  const { data: videoUrl = "" } = useMinerVideoUrl(
+    miner.category,
+    miner.minerType,
+    miner.minerIndex,
+  );
+  const borderClass = miner.isMining
+    ? "border-ethereal-cyan/35"
+    : "border-cyan-100/12";
+  const glowClass = miner.isMining
+    ? "from-cyan-300/12 to-blue-500/5"
+    : "from-cyan-300/4 to-transparent";
+
+  return (
+    <article
+      className={`group relative overflow-hidden border ${borderClass} bg-black/42 shadow-[0_18px_50px_rgba(0,0,0,0.34)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_60px_rgba(0,0,0,0.46)]`}
+    >
+      <div
+        className={`pointer-events-none absolute inset-0 bg-linear-to-br ${glowClass} opacity-70 transition-opacity group-hover:opacity-100`}
+      />
+      <div className="pointer-events-none absolute left-0 top-0 h-full w-px bg-linear-to-b from-transparent via-ethereal-cyan/45 to-transparent" />
+
+      {/* Video preview */}
+      <button
+        type="button"
+        aria-label={`View ${miner.name} fullscreen`}
+        className="relative mx-4 mt-4 flex h-52 w-[calc(100%-2rem)] cursor-pointer items-center justify-center overflow-hidden border border-cyan-100/8 bg-black/30 transition-colors hover:border-blue-400/28 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenLightbox(miner, videoUrl);
+        }}
+      >
+        <MinerVideoPlayer
+          category={miner.category}
+          minerType={miner.minerType}
+          minerIndex={miner.minerIndex}
+          autoPlay={true}
+          loop={true}
+          className="h-full w-auto max-w-full object-contain"
+        />
+      </button>
+
+      {/* Body */}
+      <div className="relative p-4">
+        {/* Name + status */}
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="alchemy-heading truncate text-base leading-tight">
+              {miner.name}
+            </h3>
+            <p className="mt-0.5 text-[0.65rem] text-cyan-50/38">
+              ID #{miner.tokenId.toString()}
+            </p>
+          </div>
+          <StatusChip status={miner.isMining ? "mining" : "idle"} />
+        </div>
+
+        {/* Stats */}
+        <div className="mb-4 divide-y divide-cyan-100/8 border border-cyan-100/8 bg-black/20">
+          <div className="flex items-center justify-between px-3 py-2.5">
+            <span className="flex items-center gap-1.5 text-xs text-cyan-50/52">
+              <Zap className="h-3.5 w-3.5 text-magma-gold/70" />
+              Power
+            </span>
+            <span className="text-xs font-semibold text-white">
+              {miner.miningPower}
+            </span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-2.5">
+            <span className="flex items-center gap-1.5 text-xs text-cyan-50/52">
+              <TrendingUp className="h-3.5 w-3.5 text-ethereal-cyan/55" />
+              Efficiency
+            </span>
+            <span className="text-xs font-semibold text-white">
+              {miner.efficiency}%
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onNavigate(miner.tokenId.toString())}
+          className="mb-2 flex w-full items-center justify-center gap-2 border border-cyan-100/12 bg-black/30 py-3 text-xs font-semibold uppercase tracking-wider text-cyan-50/52 transition-all hover:border-ethereal-cyan/35 hover:text-cyan-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+        >
+          Open Details
+        </button>
+
+        {/* Action */}
+        {miner.isMining ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowInfo("Unstaking feature in development");
+            }}
+            className="flex w-full items-center justify-center gap-2 border border-cyan-100/12 bg-black/30 py-3 text-xs font-semibold uppercase tracking-wider text-cyan-50/52 transition-all hover:border-ethereal-cyan/35 hover:text-cyan-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+          >
+            <Pickaxe className="h-3.5 w-3.5" />
+            Stop Mining
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowInfo("Staking feature in development");
+            }}
+            className="flex w-full items-center justify-center gap-2 border border-ethereal-cyan/55 bg-cyan-300/14 py-3 text-xs font-semibold uppercase tracking-wider text-cyan-50 shadow-[0_0_28px_rgba(125,249,255,0.16)] transition-all hover:border-ethereal-cyan hover:bg-cyan-300/22 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+          >
+            <Pickaxe className="h-3.5 w-3.5" />
+            Send to Staking
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+function EmptyState() {
+  return (
+    <div className="border border-orange-300/18 bg-black/42 px-6 py-20 text-center shadow-[0_0_36px_rgba(240,106,18,0.06)] backdrop-blur-md">
+      <Backpack className="mx-auto mb-5 h-9 w-9 text-magma-gold/55" />
+      <h2 className="alchemy-heading mb-3 text-2xl">Empty Vault</h2>
+      <p className="alchemy-copy mx-auto max-w-md text-sm leading-6 text-cyan-50/58">
+        Forge Crystalline Geodes or hatch CoreMiners to begin your expedition in
+        Lunacia.
+      </p>
+      <Link href="/forge">
+        <span className="mx-auto mt-8 inline-flex items-center gap-2 border border-ethereal-cyan/55 bg-cyan-300/14 px-7 py-3 text-sm font-semibold uppercase tracking-wider text-cyan-50 shadow-[0_0_28px_rgba(125,249,255,0.16)] transition-all hover:border-ethereal-cyan hover:bg-cyan-300/22 hover:text-white">
+          <Hammer className="h-4 w-4" />
+          Go to the Forge
+        </span>
+      </Link>
+    </div>
+  );
+}
+
+// ─── Error Panel ──────────────────────────────────────────────────────────────
+
+function ErrorPanel({ message }: { message: string }) {
+  return (
+    <div className="border border-magma-orange/35 bg-black/42 px-6 py-10 shadow-[0_0_36px_rgba(240,106,18,0.10)] backdrop-blur-md">
+      <p className="mb-1 text-sm font-semibold text-magma-orange">Load Error</p>
+      <p className="text-xs text-cyan-50/62">{message}</p>
+    </div>
+  );
+}
+
+function ChainStatusBanner({
+  isUpdating,
+  error,
+}: {
+  isUpdating: boolean;
+  error: string | null;
+}) {
+  if (!isUpdating && !error) return null;
+
+  return (
+    <div
+      className={`mb-6 flex items-center gap-3 border px-4 py-3 text-xs uppercase tracking-wider backdrop-blur-md ${
+        error
+          ? "border-magma-orange/35 bg-orange-500/8 text-magma-orange"
+          : "border-ethereal-cyan/25 bg-cyan-300/8 text-ethereal-cyan/75"
+      }`}
+    >
+      <RefreshCw
+        className={`h-3.5 w-3.5 ${isUpdating ? "animate-spin" : ""}`}
+      />
+      <span>
+        {error
+          ? "Showing cached inventory. Chain refresh failed."
+          : "Updating chain data…"}
+      </span>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function InventoryPage() {
   const router = useRouter();
   const { isConnected } = useWallet();
-  const { address } = useAccount();
-  const metadataService = useMetadataService();
-  const { toast, showSuccess, showError, showInfo, hideToast } = useToast();
+  const {
+    toast,
+    showSuccess,
+    showError,
+    showInfo,
+    hideToast,
+    showTransactionError,
+  } = useTransactionErrorToast();
   const { contractManager } = useContractManager();
-  const inventoryFacade = useInventoryFacade();
-  const forgeFacade = useForgeFacade();
-  const nftFacade = useNFTFacade();
+  const { afterHatch, refreshInventory } = useInvalidateOnTx();
 
-  const [geodes, setGeodes] = useState<GeodeInventoryInfo[]>([]);
-  const [miners, setMiners] = useState<CoreMinerNFT[]>([]);
-  const [activeTab, setActiveTab] = useState<"all" | "geodes" | "miners">(
-    "all",
-  );
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: geodesData,
+    isLoading: isLoadingGeodes,
+    isFetching: isFetchingGeodes,
+    isFetchingNextPage: isFetchingMoreGeodes,
+    fetchNextPage: fetchMoreGeodes,
+    hasNextPage: hasMoreGeodes,
+    error: geodesError,
+  } = useUserGeodesPaginated();
+
+  const geodes = geodesData?.pages.flat() ?? [];
+
+  const {
+    data: miners = [],
+    isLoading: isLoadingMiners,
+    isFetching: isFetchingMiners,
+    error: minersError,
+  } = useUserMiners();
+
+  const isLoading = isLoadingGeodes || isLoadingMiners;
+  const isFetching =
+    isFetchingGeodes || isFetchingMiners || isFetchingMoreGeodes;
+  const inventoryError = geodesError || minersError;
+  const error = inventoryError
+    ? getUserFacingErrorMessage(
+        inventoryError,
+        "We could not load your inventory",
+      )
+    : null;
+
+  const [activeTab, setActiveTab] = useState<TabValue>("all");
   const [showHatchAnimation, setShowHatchAnimation] = useState(false);
   const [hatchingGeodeId, setHatchingGeodeId] = useState<bigint | null>(null);
   const [hatchingGeode, setHatchingGeode] = useState<GeodeInventoryInfo | null>(
     null,
   );
   const [isTxConfirmed, setIsTxConfirmed] = useState(false);
-
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [hatchedMiner, setHatchedMiner] = useState<{
     id: bigint;
@@ -73,52 +554,26 @@ export default function InventoryPage() {
     null,
   );
 
-  // Lightbox para geodas y miners fullscreen
+  // Lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedGeode, setSelectedGeode] = useState<GeodeInventoryInfo | null>(
     null,
   );
   const [selectedMiner, setSelectedMiner] = useState<CoreMinerNFT | null>(null);
   const [lightboxVideoUrl, setLightboxVideoUrl] = useState<string>("");
-
-  const loadInventory = async () => {
-    if (!address || !inventoryFacade || !nftFacade) {
-      logger.debug("Carga de inventario omitida - falta address o facades");
-      return;
-    }
-
-    logger.info("Iniciando carga de inventario del usuario");
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Cargar geodas y miners en paralelo
-      const [geodesData, minersData] = await Promise.all([
-        inventoryFacade.getUserGeodes(address),
-        nftFacade.getMinersFromWallet(address),
-      ]);
-
-      logger.info(
-        `Inventario cargado: ${geodesData.length} geodas, ${minersData.length} miners`,
-      );
-      setGeodes(geodesData);
-      setMiners(minersData);
-    } catch (err) {
-      logger.error("Error cargando inventario", err);
-      setError(err instanceof Error ? err.message : "Error loading inventory");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const lightboxVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (isConnected && address && inventoryFacade && nftFacade) {
-      logger.debug("Condiciones OK - cargando inventario");
-      loadInventory();
+    if (lightboxOpen && lightboxVideoRef.current) {
+      const el = lightboxVideoRef.current;
+      requestAnimationFrame(() => {
+        el.requestFullscreen?.().catch(() => {
+          // Navegador puede bloquear fullscreen automático; ignorar silenciosamente
+        });
+      });
     }
-  }, [isConnected, address, inventoryFacade, nftFacade]);
+  }, [lightboxOpen]);
 
-  // Redirect automático si no hay conexión después de 3 segundos
   useEffect(() => {
     if (!isConnected) {
       const timeout = setTimeout(() => {
@@ -130,31 +585,21 @@ export default function InventoryPage() {
     }
   }, [isConnected, router]);
 
-  // Auto-refresh deshabilitado - ahora es manual con botón
-  // useEffect(() => {
-  //   if (!isConnected || !address) return;
-  //   const interval = setInterval(() => {
-  //     logger.debug('Auto-refresh de inventario');
-  //     loadInventory();
-  //   }, 30000);
-  //   return () => clearInterval(interval);
-  // }, [isConnected, address, loadInventory]);
-
   const getTimeRemaining = (hatchTime: number) => {
     const now = Math.floor(Date.now() / 1000);
     const remaining = hatchTime - now;
 
-    if (remaining <= 0) return "Listo para eclosionar";
+    if (remaining <= 0) return "Ready to hatch";
 
     const hours = Math.floor(remaining / 3600);
     const minutes = Math.floor((remaining % 3600) / 60);
 
     if (hours > 24) {
       const days = Math.floor(hours / 24);
-      return `${days}d ${hours % 24}h restantes`;
+      return `${days}d ${hours % 24}h remaining`;
     }
 
-    return `${hours}h ${minutes}m restantes`;
+    return `${hours}h ${minutes}m remaining`;
   };
 
   const handleHatchGeode = async (geodeId: bigint) => {
@@ -191,9 +636,30 @@ export default function InventoryPage() {
           });
           showInfo("Enviando transacción de eclosión...");
 
+          const provider = contractManager.getProvider();
+          if (!provider) throw new Error("Blockchain provider unavailable");
+          const hatcherState = new Contract(
+            CONTRACT_ADDRESSES.GeodeHatcherV2,
+            ["function coreMinerNFT() view returns (address)"],
+            provider,
+          );
+          const cycleState = new Contract(
+            CONTRACT_ADDRESSES.CycleManager,
+            ["function coreMinerNFT() view returns (address)"],
+            provider,
+          );
+          const [hatcherMiner, cycleMiner] = await Promise.all([
+            hatcherState.coreMinerNFT(),
+            cycleState.coreMinerNFT(),
+          ]);
+          if (hatcherMiner.toLowerCase() !== cycleMiner.toLowerCase()) {
+            throw new Error(
+              "Hatching is temporarily disabled because GeodeHatcherV2 and CycleManager use different CoreMinerNFTV2 contracts.",
+            );
+          }
+
           logger.info("🔵 [DEBUG] Obteniendo GeodeHatcher contract");
-          // Usar GeodeHatcher en lugar de ForgeFacade
-          const geodeHatcher = contractManager.getGeodeHatcher();
+          const geodeHatcher = contractManager.getGeodeHatcherV2();
 
           logger.info(
             "🔵 [DEBUG] GeodeHatcher obtenido, llamando openGeode...",
@@ -204,10 +670,12 @@ export default function InventoryPage() {
             },
           );
 
-          let result;
+          let result: Awaited<ReturnType<typeof geodeHatcher.openGeode>>;
           try {
             logger.info("🔵 [DEBUG] JUSTO ANTES de llamar openGeode");
-            result = await geodeHatcher.openGeode(geodeId);
+            result = await geodeHatcher.openGeode(geodeId, {
+              value: parseEther("0.05"),
+            });
             logger.info("🔵 [DEBUG] JUSTO DESPUES de llamar openGeode", {
               txHash: result.transaction.hash,
               minerId: result.minerId.toString(),
@@ -224,7 +692,6 @@ export default function InventoryPage() {
             success: result.success,
           });
 
-          // ✅ Convertir todos los BigInt a string para evitar error de serialización
           logger.info("Eclosión exitosa", {
             txHash: result.transaction.hash,
             success: result.success,
@@ -240,35 +707,13 @@ export default function InventoryPage() {
             `¡Geoda eclosionada! Minero ID: ${result.minerId} - Tx: ${result.transaction.hash.slice(0, 10)}...`,
           );
 
-          // ✅ Guardar resultado REAL del contrato
           setRealHatchResult(result);
           setIsTxConfirmed(true);
 
-          // ⚠️ NO recargar inventario aquí - esperar a que termine la ruleta y modal
           logger.debug("Eclosión confirmada - esperando animación de ruleta");
         } catch (contractError) {
-          // ⚠️ No pasar el error completo si contiene BigInt
-          const errorMsg =
-            contractError instanceof Error
-              ? contractError.message
-              : String(contractError);
-          logger.error("Error en eclosión", { error: errorMsg });
-
-          let errorMessage = "Error al eclosionar geoda";
-          if (contractError instanceof Error) {
-            if (
-              contractError.message.includes("user rejected") ||
-              contractError.message.includes("User rejected")
-            ) {
-              errorMessage = "Transacción cancelada por el usuario";
-            } else if (contractError.message.includes("insufficient funds")) {
-              errorMessage = "Fondos insuficientes para gas";
-            } else {
-              errorMessage = contractError.message.substring(0, 100);
-            }
-          }
-
-          showError(errorMessage);
+          logger.error("Error en eclosión", { error: contractError });
+          showTransactionError(contractError, "Error al eclosionar geoda");
           setShowHatchAnimation(false);
           setHatchingGeodeId(null);
           setHatchingGeode(null);
@@ -283,7 +728,7 @@ export default function InventoryPage() {
     }
   };
 
-  const handleRouletteComplete = async (fakeResult: ComponentHatchResult) => {
+  const handleRouletteComplete = async (_fakeResult: ComponentHatchResult) => {
     logger.info("Ruleta de eclosión completada (datos fake de animación)");
 
     if (!hatchingGeode || !realHatchResult) {
@@ -291,7 +736,6 @@ export default function InventoryPage() {
       return;
     }
 
-    // ✅ USAR DATOS REALES DEL CONTRATO, NO DE LA RULETA
     const { category, minerType, minerIndex, minerId } = realHatchResult;
 
     logger.info("Usando datos REALES del contrato", {
@@ -301,17 +745,22 @@ export default function InventoryPage() {
       minerIndex,
     });
 
-    // Cargar metadata real usando los índices del contrato
-    const { getLocalMinerName, getLocalMinerVideo } = await import(
+    const { getLocalMinerName } = await import(
       "@/lib/utils/data/localMinerData"
     );
     const { getMinerPower, getMinerAttribute } = await import(
       "@/lib/services/LocalMetadataService"
     );
+    const { getCoreMinerVideoFilename, getCoreMinerVideoPath, getStorageUrl } =
+      await import("@/lib/constants/storagePaths");
 
-    const [realName, realVideoUrl, realPower, realRarity] = await Promise.all([
+    const filename = getCoreMinerVideoFilename(category, minerType, minerIndex);
+    const realVideoUrl = filename
+      ? getStorageUrl(getCoreMinerVideoPath(category, minerType, filename))
+      : "";
+
+    const [realName, realPower, realRarity] = await Promise.all([
       getLocalMinerName(category, minerType, minerIndex),
-      getLocalMinerVideo(category, minerType, minerIndex),
       getMinerPower(category, minerType, minerIndex),
       getMinerAttribute(category, minerType, minerIndex, "Rarity"),
     ]);
@@ -345,418 +794,216 @@ export default function InventoryPage() {
     }, 1500);
   };
 
+  const totalItems = geodes.length + miners.length;
+  const hasCachedData = totalItems > 0;
+
+  // ── Connection guard ──────────────────────────────────────────────────────
   if (!isConnected) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <Loading size="lg" text="Verificando conexión..." />
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-deep-abyss">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(125,249,255,0.08),transparent_60%)]" />
+        <div className="relative">
+          <Loading size="lg" text="Verifying connection…" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <section className="relative py-12 border-b border-gray-800">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-linear-to-r from-purple-500 to-pink-600 bg-clip-text text-transparent">
-                🎒 Mi Inventario
-              </h1>
-              <p className="text-gray-400 text-lg">
-                Geodas Cristalinas y CoreMiners
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  logger.info("Refresh manual del inventario solicitado");
-                  loadInventory();
-                }}
-                disabled={isLoading}
-              >
-                🔄 Actualizar Inventario
-              </Button>
-              <Link href="/dashboard">
-                <Button variant="secondary">← Volver al Dashboard</Button>
-              </Link>
-              <Link href="/forge">
-                <Button variant="primary">🔨 Forjar Nueva Geoda</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+    <>
+      <main className="alchemy-copy relative min-h-screen overflow-hidden bg-deep-abyss pt-28 text-white">
+        {/* Background */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_70%_10%,rgba(125,249,255,0.10),transparent_30%),radial-gradient(circle_at_18%_42%,rgba(240,106,18,0.10),transparent_28%),linear-gradient(180deg,#020607_0%,#030b0e_50%,#010203_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.72),transparent_18%,transparent_82%,rgba(0,0,0,0.72))]" />
 
-      <div className="container mx-auto px-4 py-8">
-        {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <Loading size="lg" text="Cargando inventario..." />
-          </div>
-        )}
-
-        {error && !isLoading && (
-          <Card variant="glass" className="p-6 bg-red-900/20 border-red-500">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">❌</div>
+        <div className="relative z-1 mx-auto w-full max-w-6xl px-4 pb-24 md:px-8">
+          {/* ── Hero ── */}
+          <header className="mb-10">
+            <p className="alchemy-eyebrow mb-3 text-xs">Prospector Vault</p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <div className="font-bold text-red-500">Error</div>
-                <div className="text-sm text-gray-300">{error}</div>
+                <h1 className="alchemy-heading-strong text-3xl leading-tight md:text-5xl">
+                  My Inventory
+                </h1>
+                {!isLoading && (
+                  <p className="mt-2 text-sm text-cyan-50/42">
+                    {totalItems} {totalItems === 1 ? "item" : "items"} — Geodes
+                    &amp; CoreMiners
+                  </p>
+                )}
+              </div>
+
+              {/* Header actions */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => refreshInventory()}
+                  disabled={isLoading}
+                  className="inline-flex items-center gap-2 border border-cyan-100/12 bg-black/42 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-cyan-50/58 transition-all hover:border-ethereal-cyan/45 hover:text-cyan-50 disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`}
+                  />
+                  Refresh
+                </button>
+                <Link href="/dashboard">
+                  <span className="inline-flex items-center gap-2 border border-cyan-100/12 bg-black/42 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-cyan-50/58 transition-all hover:border-ethereal-cyan/45 hover:text-cyan-50">
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    Dashboard
+                  </span>
+                </Link>
+                <Link href="/forge">
+                  <span className="inline-flex items-center gap-2 border border-ethereal-cyan/55 bg-cyan-300/14 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-cyan-50 shadow-[0_0_28px_rgba(125,249,255,0.16)] transition-all hover:border-ethereal-cyan hover:bg-cyan-300/22 hover:text-white">
+                    <Hammer className="h-3.5 w-3.5" />
+                    Forge Geode
+                  </span>
+                </Link>
               </div>
             </div>
-          </Card>
-        )}
+          </header>
 
-        {!isLoading && !error && geodes.length === 0 && miners.length === 0 && (
-          <Card variant="glass" className="p-12 text-center">
-            <div className="text-6xl mb-6">🎒</div>
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Inventario vacío
-            </h2>
-            <p className="text-gray-400 mb-6">
-              Forja geodas o eclosiona miners para comenzar tu aventura en
-              ScorchCore
-            </p>
-            <Link href="/forge">
-              <Button variant="primary" size="lg">
-                🔨 Ir a la Forja
-              </Button>
-            </Link>
-          </Card>
-        )}
+          <ChainStatusBanner
+            isUpdating={isFetching && !isLoading}
+            error={!isLoading && hasCachedData ? error : null}
+          />
 
-        {!isLoading && !error && (geodes.length > 0 || miners.length > 0) && (
-          <>
-            {/* Tabs para filtrar */}
-            <div className="flex gap-3 mb-6 border-b border-gray-700 pb-4">
-              <button
+          {/* ── Tabs ── */}
+          {!isLoading && (!error || hasCachedData) && totalItems > 0 && (
+            <nav
+              className="mb-8 flex flex-wrap gap-2"
+              aria-label="Inventory filter"
+            >
+              <TabButton
+                active={activeTab === "all"}
                 onClick={() => setActiveTab("all")}
-                className={`px-6 py-2 rounded-t-lg font-medium transition-colors ${
-                  activeTab === "all"
-                    ? "bg-purple-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                }`}
-              >
-                📦 Todos ({geodes.length + miners.length})
-              </button>
-              <button
+                icon={Layers}
+                label="All"
+                count={totalItems}
+              />
+              <TabButton
+                active={activeTab === "geodes"}
                 onClick={() => setActiveTab("geodes")}
-                className={`px-6 py-2 rounded-t-lg font-medium transition-colors ${
-                  activeTab === "geodes"
-                    ? "bg-purple-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                }`}
-              >
-                🥚 Geodas ({geodes.length})
-              </button>
-              <button
+                icon={Egg}
+                label="Geodes"
+                count={geodes.length}
+              />
+              <TabButton
+                active={activeTab === "miners"}
                 onClick={() => setActiveTab("miners")}
-                className={`px-6 py-2 rounded-t-lg font-medium transition-colors ${
-                  activeTab === "miners"
-                    ? "bg-purple-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                }`}
-              >
-                ⛏️ CoreMiners ({miners.length})
-              </button>
-            </div>
+                icon={Pickaxe}
+                label="CoreMiners"
+                count={miners.length}
+              />
+            </nav>
+          )}
 
-            {/* Sección de Geodas */}
-            {(activeTab === "all" || activeTab === "geodes") &&
-              geodes.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-white mb-6">
-                    🥚 Geodas Cristalinas ({geodes.length})
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {geodes.map((geode) => (
-                      <Card
-                        key={geode.id.toString()}
-                        variant={geode.canHatch ? "gradient" : "glass"}
-                        hover
-                        className="p-6"
-                      >
-                        <div
-                          className="mb-4 flex items-center justify-center bg-black/20 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-purple-500 transition-all"
-                          style={{ height: "240px" }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            logger.info("Abriendo lightbox para geoda", {
-                              geodeId: geode.id.toString(),
-                            });
-                            // Construir ruta correcta para geoda
-                            const categoryName =
-                              CATEGORY_INFO[geode.category].name.toLowerCase();
-                            const categoryUpper =
-                              CATEGORY_INFO[geode.category].name.toUpperCase();
-                            const classUpper =
-                              AXIE_CLASS_INFO[
-                                geode.axieClass
-                              ].name.toUpperCase();
-                            const videoUrl = `/assets/geodes/${categoryName}/GEODA_${categoryUpper}_${classUpper}.mp4`;
+          {/* ── Loading ── */}
+          {isLoading && (
+            <div className="flex flex-col items-center justify-center gap-4 py-28">
+              <Loading size="lg" text="Loading inventory…" />
+            </div>
+          )}
+
+          {/* ── Error ── */}
+          {error && !isLoading && !hasCachedData && (
+            <ErrorPanel message={error} />
+          )}
+
+          {/* ── Empty ── */}
+          {!isLoading && !error && totalItems === 0 && <EmptyState />}
+
+          {/* ── Content ── */}
+          {!isLoading && (!error || hasCachedData) && totalItems > 0 && (
+            <div className="space-y-14">
+              {/* Geodes */}
+              {(activeTab === "all" || activeTab === "geodes") &&
+                geodes.length > 0 && (
+                  <section>
+                    <header className="mb-6 flex items-center gap-3">
+                      <Egg className="h-5 w-5 text-magma-gold" />
+                      <h2 className="alchemy-heading text-xl">
+                        Crystalline Geodes
+                      </h2>
+                      <span className="border border-magma-gold/35 bg-orange-500/8 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-widest text-magma-gold/75">
+                        {geodes.length}
+                      </span>
+                    </header>
+                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                      {geodes.map((geode) => (
+                        <GeodeCard
+                          key={geode.id.toString()}
+                          geode={geode}
+                          isHatching={hatchingGeodeId === geode.id}
+                          onHatch={handleHatchGeode}
+                          onOpenLightbox={(g, videoUrl) => {
                             setLightboxVideoUrl(videoUrl);
-                            setSelectedGeode(geode);
+                            setSelectedGeode(g);
                             setLightboxOpen(true);
                           }}
+                          getTimeRemaining={getTimeRemaining}
+                        />
+                      ))}
+                    </div>
+                    {hasMoreGeodes && (
+                      <div className="mt-6 flex justify-center">
+                        <button
+                          type="button"
+                          onClick={() => fetchMoreGeodes()}
+                          disabled={isFetchingMoreGeodes}
+                          className="alchemy-btn-secondary flex items-center gap-2 px-6 py-2.5 text-sm font-medium uppercase tracking-widest disabled:opacity-50"
                         >
-                          <GeodeVideo
-                            category={geode.category}
-                            axieClass={geode.axieClass}
-                            className="h-full w-auto max-w-full object-contain"
-                            autoPlay={true}
-                          />
-                        </div>
-
-                        <div className="text-center mb-4">
-                          <h3 className="text-xl font-bold text-white mb-1">
-                            Geoda {geode.fullName}
-                          </h3>
-                          <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                            <Badge
-                              variant="info"
-                              className="text-xs"
-                              style={{
-                                backgroundColor:
-                                  CATEGORY_INFO[geode.category].color + "40",
-                                borderColor:
-                                  CATEGORY_INFO[geode.category].color,
-                              }}
-                            >
-                              {geode.categoryName}
-                            </Badge>
-                            <Badge
-                              variant="default"
-                              className="text-xs"
-                              style={{
-                                backgroundColor:
-                                  AXIE_CLASS_INFO[geode.axieClass].color + "40",
-                                borderColor:
-                                  AXIE_CLASS_INFO[geode.axieClass].color,
-                              }}
-                            >
-                              {geode.className}
-                            </Badge>
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            ID #{geode.id.toString()}
-                          </div>
-                        </div>
-
-                        <div className="space-y-3 mb-6">
-                          <div className="flex justify-between items-center p-3 bg-black/40 rounded-lg border border-gray-700">
-                            <span className="text-gray-400 text-sm">
-                              Estado:
-                            </span>
-                            {geode.isHatched ? (
-                              <Badge variant="success">Eclosionada</Badge>
-                            ) : geode.canHatch ? (
-                              <Badge variant="warning">Lista</Badge>
-                            ) : (
-                              <Badge variant="info">Incubando</Badge>
-                            )}
-                          </div>
-
-                          <div className="flex justify-between items-center p-3 bg-black/40 rounded-lg border border-gray-700">
-                            <span className="text-gray-400 text-sm">
-                              ⚡ Poder:
-                            </span>
-                            <span className="text-white text-sm font-bold">
-                              {geode.miningPower}
-                            </span>
-                          </div>
-
-                          {!geode.isHatched && (
-                            <div className="flex justify-between items-center p-3 bg-black/40 rounded-lg border border-gray-700">
-                              <span className="text-gray-400 text-sm">
-                                Tiempo:
-                              </span>
-                              <span className="text-white text-sm font-medium">
-                                {getTimeRemaining(geode.hatchTime)}
-                              </span>
-                            </div>
+                          {isFetchingMoreGeodes ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            "Load More Geodes"
                           )}
+                        </button>
+                      </div>
+                    )}
+                  </section>
+                )}
 
-                          <div className="flex justify-between items-center p-3 bg-black/40 rounded-lg border border-gray-700">
-                            <span className="text-gray-400 text-sm">
-                              Creada:
-                            </span>
-                            <span className="text-white text-sm">
-                              {new Date(
-                                geode.createdAt * 1000,
-                              ).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-
-                        {geode.canHatch && !geode.isHatched && (
-                          <Button
-                            variant="primary"
-                            className="w-full bg-linear-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleHatchGeode(geode.id);
-                            }}
-                            disabled={hatchingGeodeId === geode.id}
-                          >
-                            {hatchingGeodeId === geode.id ? (
-                              <>🎲 Eclosionando...</>
-                            ) : (
-                              <>🐣 Eclosionar Ahora</>
-                            )}
-                          </Button>
-                        )}
-
-                        {geode.isHatched && (
-                          <Button variant="outline" className="w-full" disabled>
-                            Ya Eclosionada
-                          </Button>
-                        )}
-
-                        {!geode.isHatched && !geode.canHatch && (
-                          <Button variant="outline" className="w-full" disabled>
-                            ⏳ Incubando...
-                          </Button>
-                        )}
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {/* Sección de CoreMiners */}
-            {(activeTab === "all" || activeTab === "miners") &&
-              miners.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-white mb-6">
-                    ⛏️ CoreMiners ({miners.length})
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {miners.map((miner) => (
-                      <Card
-                        key={miner.tokenId.toString()}
-                        variant="glass"
-                        hover
-                        className="p-6 cursor-pointer"
-                        onClick={() => {
-                          logger.info("Navegando a detalles de CoreMiner", {
-                            tokenId: miner.tokenId.toString(),
-                          });
-                          router.push(`/coreminer/${miner.tokenId.toString()}`);
-                        }}
-                      >
-                        <div
-                          className="mb-4 flex items-center justify-center bg-black/20 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
-                          style={{ height: "240px" }}
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            logger.info("Abriendo lightbox para miner", {
-                              tokenId: miner.tokenId.toString(),
-                            });
-                            // Cargar URL correcta desde metadata
-                            try {
-                              const { getLocalMinerVideo } = await import(
-                                "@/lib/utils/data/localMinerData"
-                              );
-                              const videoUrl = await getLocalMinerVideo(
-                                miner.category,
-                                miner.minerType,
-                                miner.minerIndex,
-                              );
-                              setLightboxVideoUrl(videoUrl);
-                              setSelectedMiner(miner);
-                              setLightboxOpen(true);
-                            } catch (error) {
-                              logger.error(
-                                "Error cargando video de miner",
-                                error,
-                              );
-                            }
+              {/* CoreMiners */}
+              {(activeTab === "all" || activeTab === "miners") &&
+                miners.length > 0 && (
+                  <section>
+                    <header className="mb-6 flex items-center gap-3">
+                      <Pickaxe className="h-5 w-5 text-ethereal-cyan" />
+                      <h2 className="alchemy-heading text-xl">CoreMiners</h2>
+                      <span className="border border-ethereal-cyan/35 bg-cyan-300/6 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-widest text-ethereal-cyan/65">
+                        {miners.length}
+                      </span>
+                    </header>
+                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                      {miners.map((miner) => (
+                        <MinerCard
+                          key={miner.tokenId.toString()}
+                          miner={miner}
+                          onOpenLightbox={(m, videoUrl) => {
+                            setLightboxVideoUrl(videoUrl);
+                            setSelectedMiner(m);
+                            setLightboxOpen(true);
                           }}
-                        >
-                          <MinerVideoPlayer
-                            category={miner.category}
-                            minerType={miner.minerType}
-                            minerIndex={miner.minerIndex}
-                            autoPlay={true}
-                            loop={true}
-                            className="h-full w-auto max-w-full object-contain"
-                          />
-                        </div>
+                          onShowInfo={showInfo}
+                          onNavigate={(tokenId) =>
+                            router.push(`/coreminer/${tokenId}`)
+                          }
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+            </div>
+          )}
+        </div>
+      </main>
 
-                        <div className="text-center mb-4">
-                          <h3 className="text-xl font-bold text-white mb-1">
-                            {miner.name}
-                          </h3>
-                          <div className="text-xs text-gray-500 mt-1">
-                            ID #{miner.tokenId.toString()}
-                          </div>
-                        </div>
+      <Footer />
 
-                        <div className="space-y-3 mb-6">
-                          <div className="flex justify-between items-center p-3 bg-black/40 rounded-lg border border-gray-700">
-                            <span className="text-gray-400 text-sm">
-                              ⚡ Poder:
-                            </span>
-                            <span className="text-white text-sm font-bold">
-                              {miner.miningPower}
-                            </span>
-                          </div>
-
-                          <div className="flex justify-between items-center p-3 bg-black/40 rounded-lg border border-gray-700">
-                            <span className="text-gray-400 text-sm">
-                              📊 Eficiencia:
-                            </span>
-                            <span className="text-white text-sm font-bold">
-                              {miner.efficiency}%
-                            </span>
-                          </div>
-
-                          <div className="flex justify-between items-center p-3 bg-black/40 rounded-lg border border-gray-700">
-                            <span className="text-gray-400 text-sm">
-                              Estado:
-                            </span>
-                            {miner.isMining ? (
-                              <Badge variant="success">Minando</Badge>
-                            ) : (
-                              <Badge variant="default">Idle</Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        {!miner.isMining && (
-                          <Button
-                            variant="primary"
-                            className="w-full"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              showInfo("Función de staking en desarrollo");
-                            }}
-                          >
-                            💼 Enviar a Staking
-                          </Button>
-                        )}
-
-                        {miner.isMining && (
-                          <Button
-                            variant="secondary"
-                            className="w-full"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              showInfo("Función de unstaking en desarrollo");
-                            }}
-                          >
-                            ⏸️ Detener Minería
-                          </Button>
-                        )}
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-          </>
-        )}
-      </div>
-
+      {/* ── Overlays ── */}
       {showHatchAnimation && hatchingGeode && (
         <HatchRoulette
           category={hatchingGeode.category}
@@ -778,10 +1025,8 @@ export default function InventoryPage() {
             setHatchingGeodeId(null);
             setHatchingGeode(null);
             setRealHatchResult(null);
-
-            // ✅ Recargar inventario DESPUÉS de cerrar modal
-            logger.debug("Modal cerrado - recargando inventario");
-            loadInventory();
+            logger.debug("Modal cerrado - invalidando queries de inventario");
+            afterHatch();
           }}
           category={hatchedMiner.category}
           axieClass={hatchedMiner.axieClass}
@@ -795,10 +1040,15 @@ export default function InventoryPage() {
       )}
 
       {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          title={toast.title}
+          action={toast.action}
+          onClose={hideToast}
+        />
       )}
 
-      {/* Lightbox para ver geodas y miners en fullscreen */}
       {(selectedGeode || selectedMiner) && lightboxVideoUrl && (
         <Lightbox
           open={lightboxOpen}
@@ -811,12 +1061,7 @@ export default function InventoryPage() {
           slides={[
             {
               type: "video",
-              sources: [
-                {
-                  src: lightboxVideoUrl,
-                  type: "video/mp4",
-                },
-              ],
+              sources: [{ src: lightboxVideoUrl, type: "video/mp4" }],
               width: 1920,
               height: 1080,
             },
@@ -828,17 +1073,22 @@ export default function InventoryPage() {
             slide: ({ slide }) => {
               if (slide.type === "video" && slide.sources) {
                 return (
-                  <div className="flex items-center justify-center w-full h-full bg-black">
+                  <div className="flex h-full w-full items-center justify-center bg-black">
                     <video
+                      ref={lightboxVideoRef}
                       autoPlay
                       loop
                       muted
                       controls
-                      className="max-w-full max-h-full"
+                      className="max-h-full max-w-full"
                       style={{ objectFit: "contain" }}
                     >
-                      {slide.sources.map((source, idx) => (
-                        <source key={idx} src={source.src} type={source.type} />
+                      {slide.sources.map((source) => (
+                        <source
+                          key={`${source.src}-${source.type}`}
+                          src={source.src}
+                          type={source.type}
+                        />
                       ))}
                     </video>
                   </div>
@@ -849,6 +1099,6 @@ export default function InventoryPage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

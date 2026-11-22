@@ -1,26 +1,24 @@
 "use client";
 
+import { TantoConnectButton } from "@sky-mavis/tanto-widget";
 import {
   Check,
   ChevronDown,
   Copy,
   ExternalLink,
-  KeyRound,
   LogOut,
   Wallet,
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { useAccount, useBalance, useConnect, useDisconnect } from "wagmi";
+import { useAccount, useBalance, useDisconnect } from "wagmi";
 
 export const ConnectWallet: React.FC = () => {
   const { address, isConnected, chain } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
   const { data: balance } = useBalance({ address });
 
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showConnectors, setShowConnectors] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const formatAddress = (addr: string) => {
@@ -50,76 +48,24 @@ export const ConnectWallet: React.FC = () => {
     return `${baseUrl}${address}`;
   };
 
-  // Not connected - show connect button
+  // Not connected - Tanto Widget modal (Ronin Wallet + Waypoint)
   if (!isConnected) {
     return (
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setShowConnectors(!showConnectors)}
-          disabled={isPending}
-          className="scorch-nav-link scorch-nav-link--wallet disabled:cursor-not-allowed disabled:opacity-50"
-          aria-expanded={showConnectors}
-        >
-          <Wallet className="h-4 w-4" />
-          <span className="scorch-nav-label">
-            [ {isPending ? "Connecting" : "Connect Wallet"} ]
-          </span>
-        </button>
-
-        {/* Connector Selection Modal */}
-        {showConnectors && (
-          <>
-            <button
-              type="button"
-              aria-label="Close wallet connector menu"
-              className="fixed inset-0 z-40"
-              onClick={() => setShowConnectors(false)}
-            />
-            <div className="scorch-nav-panel absolute right-0 z-50 mt-3 w-72 overflow-hidden">
-              <div className="border-b border-orange-500/15 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-magma-gold">
-                  [ Connect Wallet ]
-                </h3>
-                <p className="mt-1 text-sm text-cyan-100/55">
-                  Choose how you want to connect
-                </p>
-              </div>
-              <div className="p-2">
-                {connectors.map((connector) => (
-                  <button
-                    type="button"
-                    key={connector.uid}
-                    onClick={() => {
-                      connect({ connector });
-                      setShowConnectors(false);
-                    }}
-                    className="flex w-full items-center gap-3 rounded-lg border border-transparent p-3 text-left transition-colors hover:border-orange-300/35 hover:bg-orange-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-orange-300/25 bg-black/45 text-magma-gold">
-                      {connector.name === "Waypoint" ? (
-                        <KeyRound className="h-5 w-5" />
-                      ) : (
-                        <Wallet className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium text-white">{connector.name}</p>
-                      <p className="text-xs text-cyan-100/55">
-                        {connector.name === "Ronin Wallet"
-                          ? "Browser extension or mobile app"
-                          : connector.name === "Waypoint"
-                            ? "Email or social login"
-                            : "Connect with wallet"}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
+      <TantoConnectButton>
+        {({ showModal, modalOpen }) => (
+          <button
+            type="button"
+            onClick={showModal}
+            disabled={modalOpen}
+            className="scorch-nav-link scorch-nav-link--wallet disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Wallet className="h-4 w-4" />
+            <span className="scorch-nav-label">
+              [ {modalOpen ? "Connecting" : "Connect Wallet"} ]
+            </span>
+          </button>
         )}
-      </div>
+      </TantoConnectButton>
     );
   }
 
